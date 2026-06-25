@@ -21,7 +21,7 @@ export interface IBatch extends Document {
 const BatchSchema = new Schema<IBatch>(
   {
     name: { type: String, required: true },
-    code: { type: String, required: true, unique: true },
+    code: { type: String, required: true, unique: true, default: () => `BATCH-${Date.now()}-${Math.floor(100 + Math.random() * 900)}` },
     course: { type: Schema.Types.ObjectId, ref: 'Course' },
     class: { type: Schema.Types.ObjectId, ref: 'Class' },
     startDate: { type: Date },

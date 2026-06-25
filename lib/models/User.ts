@@ -52,6 +52,18 @@ UserSchema.pre('save', async function (next) {
   }
 });
 
+// Auto-generate teacherId for teacher users if missing
+UserSchema.pre('save', async function (next) {
+  try {
+    if (this.role === 'teacher' && !this.teacherId) {
+      this.teacherId = `TEA-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    }
+    next();
+  } catch (err) {
+    next(err as Error);
+  }
+});
+
 // Method to compare passwords
 UserSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
   return bcrypt.compare(password, this.password);

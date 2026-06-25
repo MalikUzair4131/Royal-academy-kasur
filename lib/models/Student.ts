@@ -37,7 +37,7 @@ export interface IStudent extends Document {
 const StudentSchema = new Schema<IStudent>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    studentId: { type: String, required: true, unique: true },
+    studentId: { type: String, required: true, unique: true, default: () => `STU-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}` },
     firstName: { type: String, required: true },
     lastName: { type: String },
     email: { type: String, lowercase: true },

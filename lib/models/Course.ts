@@ -22,7 +22,7 @@ export interface ICourse extends Document {
 const CourseSchema = new Schema<ICourse>(
   {
     name: { type: String, required: true },
-    code: { type: String, required: true, unique: true },
+    code: { type: String, required: true, unique: true, default: () => `CRS-${Date.now()}-${Math.floor(100 + Math.random() * 900)}` },
     type: { type: String, default: 'training' },
     category: { type: String },
     description: { type: String },
