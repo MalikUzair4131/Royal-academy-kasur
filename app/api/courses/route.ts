@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Course } from '@/lib/models/Course';
+import { User } from '@/lib/models/User';
 import { withAuth, unauthorized, badRequest, serverError } from '@/lib/middleware';
+
+function generateCourseCode(name: string) {
+  const cleaned = name
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .toUpperCase();
+  return `${cleaned}-${Math.floor(100 + Math.random() * 900)}`;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,8 +23,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
+    const isActive = searchParams.get('isActive');
 
-    const query: any = { isActive: true };
+    const query: any = {};
+    if (isActive !== null) query.isActive = isActive === 'true';
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -26,9 +39,12 @@ export async function GET(request: NextRequest) {
       .populate('branch', 'name code')
       .sort({ createdAt: -1 });
 
+    const total = await Course.countDocuments(query);
+
     return NextResponse.json(
       {
         data: courses,
+        total,
       },
       { status: 200 }
     );
@@ -46,13 +62,25 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { name, code, description, fee, branch } = body;
+    const { name, code, branch } = body;
 
-    if (!name || !code || !branch) {
-      return badRequest('Name, code and branch are required');
+    if (!name) {
+      return badRequest('Name is required');
     }
 
-    const course = await Course.create(body);
+    const authUser = await User.findById((user as any)._id).select('branch');
+    const courseBranch = branch || authUser?.branch;
+    if (!courseBranch) {
+      return badRequest('Branch is required');
+    }
+
+    const courseCode = code || generateCourseCode(name);
+
+    const course = await Course.create({
+      ...body,
+      branch: courseBranch,
+      code: courseCode,
+    });
 
     return NextResponse.json(
       {

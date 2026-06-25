@@ -32,7 +32,8 @@ export default function Batches() {
         coursesApi.list({ isActive: true }),
         teachersApi.list({ isActive: true })
       ]);
-      setBatches(bd.data.data); setTotal(bd.data.total);
+      setBatches(bd.data.data);
+      setTotal(bd.data.total ?? bd.data.data.length);
       setCourses(cd.data.data); setTeachers(td.data.data);
     } catch { toast.error('Failed to load batches'); }
     finally { setLoading(false); }
@@ -93,7 +94,7 @@ export default function Batches() {
               <div>
                 <span className={STATUS_STYLE[b.status] || 'badge-gray'}>{b.status}</span>
                 <h3 className="font-semibold text-gray-900 mt-2">{b.name}</h3>
-                <p className="text-xs text-gray-500">{b.batchCode}</p>
+                <p className="text-xs text-gray-500">{b.code}</p>
               </div>
               {hasPermission('courses', 'edit') && (
                 <button onClick={() => openEdit(b)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition">
