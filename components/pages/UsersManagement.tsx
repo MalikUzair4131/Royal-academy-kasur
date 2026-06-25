@@ -81,9 +81,9 @@ export default function UsersManagement() {
                 <tr key={u._id} className={u.isOwner ? 'bg-purple-50/30' : ''}>
                   <td>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-xs flex-shrink-0">{u.name[0]}</div>
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-xs flex-shrink-0">{u.name?.[0] ?? '•'}</div>
                       <div>
-                        <p className="font-medium text-gray-900 text-sm flex items-center gap-1.5">{u.name}{u.isOwner && <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold">OWNER</span>}</p>
+                        <p className="font-medium text-gray-900 text-sm flex items-center gap-1.5">{u.name ?? '—'}{u.isOwner && <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold">OWNER</span>}</p>
                         <p className="text-xs text-gray-400">{u.email}</p>
                       </div>
                     </div>

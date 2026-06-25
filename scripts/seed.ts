@@ -1,9 +1,17 @@
+import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/db';
 import { User } from '@/lib/models/User';
 import { Branch } from '@/lib/models/Branch';
 import { Course } from '@/lib/models/Course';
 import { Batch } from '@/lib/models/Batch';
 import { Student } from '@/lib/models/Student';
+
+async function hashPasswords<T extends { password: string }>(items: T[]) {
+  return Promise.all(items.map(async (item) => ({
+    ...item,
+    password: await bcrypt.hash(item.password, 10),
+  })));
+}
 
 const demoUsers = [
   {
@@ -98,11 +106,13 @@ async function seed() {
     const branches = await Branch.insertMany(demoBranches);
     console.log(`✓ Created ${branches.length} branches`);
 
-    // Create users
-    const usersWithBranch = demoUsers.map((user, idx) => ({
-      ...user,
-      branch: user.role === 'teacher' ? branches[0]._id : undefined,
-    }));
+    // Create users with hashed passwords
+    const usersWithBranch = await hashPasswords(
+      demoUsers.map((user, idx) => ({
+        ...user,
+        branch: user.role === 'teacher' ? branches[0]._id : undefined,
+      }))
+    );
 
     const users = await User.insertMany(usersWithBranch);
     console.log(`✓ Created ${users.length} users`);
@@ -172,44 +182,46 @@ async function seed() {
     console.log(`✓ Created ${batches.length} batches`);
 
     // Create demo students
-    const studentUsers = await User.insertMany([
-      {
-        name: 'Ali Ahmed',
-        email: 'ali.ahmed@student.royalacademy.com',
-        password: 'Student@123',
-        role: 'student',
-        isActive: true,
-        permissions: [
-          { module: 'dashboard', actions: ['view'] },
-          { module: 'attendance', actions: ['view'] },
-          { module: 'fees', actions: ['view'] },
-        ],
-      },
-      {
-        name: 'Sara Khan',
-        email: 'sara.khan@student.royalacademy.com',
-        password: 'Student@123',
-        role: 'student',
-        isActive: true,
-        permissions: [
-          { module: 'dashboard', actions: ['view'] },
-          { module: 'attendance', actions: ['view'] },
-          { module: 'fees', actions: ['view'] },
-        ],
-      },
-      {
-        name: 'Hassan Malik',
-        email: 'hassan.malik@student.royalacademy.com',
-        password: 'Student@123',
-        role: 'student',
-        isActive: true,
-        permissions: [
-          { module: 'dashboard', actions: ['view'] },
-          { module: 'attendance', actions: ['view'] },
-          { module: 'fees', actions: ['view'] },
-        ],
-      },
-    ]);
+    const studentUsers = await User.insertMany(
+      await hashPasswords([
+        {
+          name: 'Ali Ahmed',
+          email: 'ali.ahmed@student.royalacademy.com',
+          password: 'Student@123',
+          role: 'student',
+          isActive: true,
+          permissions: [
+            { module: 'dashboard', actions: ['view'] },
+            { module: 'attendance', actions: ['view'] },
+            { module: 'fees', actions: ['view'] },
+          ],
+        },
+        {
+          name: 'Sara Khan',
+          email: 'sara.khan@student.royalacademy.com',
+          password: 'Student@123',
+          role: 'student',
+          isActive: true,
+          permissions: [
+            { module: 'dashboard', actions: ['view'] },
+            { module: 'attendance', actions: ['view'] },
+            { module: 'fees', actions: ['view'] },
+          ],
+        },
+        {
+          name: 'Hassan Malik',
+          email: 'hassan.malik@student.royalacademy.com',
+          password: 'Student@123',
+          role: 'student',
+          isActive: true,
+          permissions: [
+            { module: 'dashboard', actions: ['view'] },
+            { module: 'attendance', actions: ['view'] },
+            { module: 'fees', actions: ['view'] },
+          ],
+        },
+      ])
+    );
 
     const students = await Student.insertMany(
       studentUsers.map((user, idx) => ({

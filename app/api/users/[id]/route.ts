@@ -5,7 +5,7 @@ import { withAuth, unauthorized, notFound, serverError } from '@/lib/middleware'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await withAuth(request as any);
@@ -13,7 +13,7 @@ export async function PUT(
 
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -40,7 +40,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await withAuth(request as any);
@@ -48,7 +48,7 @@ export async function DELETE(
 
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
     const deletedUser = await User.findByIdAndDelete(id);
 
     if (!deletedUser) {
@@ -69,7 +69,7 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await withAuth(request as any);
@@ -77,7 +77,7 @@ export async function PATCH(
 
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const pathname = request.nextUrl.pathname;
 

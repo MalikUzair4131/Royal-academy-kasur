@@ -1,32 +1,75 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { studentsApi, coursesApi } from '@/services/api';
 import { toast } from 'sonner';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 
+// ✅ Field component defined OUTSIDE StudentForm so it never re-creates on every keystroke
+interface FieldProps {
+  label: string;
+  name: string;
+  type?: string;
+  options?: { value: string; label: string }[];
+  required?: boolean;
+  value: string | number;
+  onChange: (name: string, value: string) => void;
+}
+
+function Field({ label, name, type = 'text', options, required, value, onChange }: FieldProps) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      {options ? (
+        <select
+          value={value}
+          onChange={e => onChange(name, e.target.value)}
+          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+        >
+          <option value="">Select {label}</option>
+          {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      ) : (
+        <input
+          type={type}
+          value={value}
+          onChange={e => onChange(name, e.target.value)}
+          required={required}
+          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      )}
+    </div>
+  );
+}
+
+const INITIAL_FORM = {
+  firstName: '', lastName: '', email: '', password: 'student123',
+  phone: '', dateOfBirth: '', gender: '', address: '', city: '',
+  cnic: '', admissionDate: new Date().toISOString().slice(0, 10),
+  class: '', section: '', rollNumber: '',
+  scholarshipType: 'none', scholarshipPercentage: 0,
+  guardianName: '', guardianPhone: '', guardianRelationship: 'father',
+  notes: ''
+};
+
 export default function StudentForm() {
-  const params = useParams(); const id = params?.id as string;
+  const params = useParams();
+  const id = params?.id as string | undefined;
   const router = useRouter();
   const isEdit = !!id;
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [courses, setCourses] = useState<any[]>([]);
-  const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', password: 'student123',
-    phone: '', dateOfBirth: '', gender: '', address: '', city: '',
-    cnic: '', admissionDate: new Date().toISOString().slice(0, 10),
-    class: '', section: '', rollNumber: '',
-    scholarshipType: 'none', scholarshipPercentage: 0,
-    guardianName: '', guardianPhone: '', guardianRelationship: 'father',
-    notes: ''
-  });
+  const [form, setForm] = useState(INITIAL_FORM);
 
   useEffect(() => {
     coursesApi.list({ isActive: true }).then(r => setCourses(r.data.data)).catch(() => {});
-    if (isEdit) {
+    if (isEdit && id) {
       setLoading(true);
-      studentsApi.get(id!).then(r => {
+      studentsApi.get(id).then(r => {
         const s = r.data.data;
         setForm(prev => ({
           ...prev,
@@ -43,11 +86,14 @@ export default function StudentForm() {
           notes: s.notes || ''
         }));
       }).catch(() => toast.error('Failed to load student'))
-      .finally(() => setLoading(false));
+        .finally(() => setLoading(false));
     }
   }, [id, isEdit]);
 
-  const set = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
+  // ✅ useCallback prevents handler recreation on each render
+  const handleChange = useCallback((name: string, value: string) => {
+    setForm(prev => ({ ...prev, [name]: value }));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,40 +105,31 @@ export default function StudentForm() {
     try {
       const payload = {
         ...form,
-        guardians: form.guardianName ? [{ name: form.guardianName, phone: form.guardianPhone, relationship: form.guardianRelationship }] : []
+        guardians: form.guardianName
+          ? [{ name: form.guardianName, phone: form.guardianPhone, relationship: form.guardianRelationship }]
+          : []
       };
-      if (isEdit) await studentsApi.update(id!, payload);
+      if (isEdit && id) await studentsApi.update(id, payload);
       else await studentsApi.create(payload);
       toast.success(isEdit ? 'Student updated successfully' : 'Student enrolled successfully');
       router.push('/students');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to save student');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const Field = ({ label, name, type = 'text', options, required }: any) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
-      {options ? (
-        <select value={(form as any)[name]} onChange={e => set(name, e.target.value)}
-          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-          <option value="">Select {label}</option>
-          {options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      ) : (
-        <input type={type} value={(form as any)[name]} onChange={e => set(name, e.target.value)}
-          required={required}
-          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      )}
+  if (loading) return (
+    <div className="flex justify-center py-16">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
     </div>
   );
-
-  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
 
   return (
     <div className="max-w-3xl">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.push(-1)} className="p-2 rounded-lg hover:bg-gray-100">
+        <button onClick={() => router.back()} className="p-2 rounded-lg hover:bg-gray-100">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div>
@@ -106,21 +143,26 @@ export default function StudentForm() {
         <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h3 className="font-semibold text-gray-900 mb-4">Personal Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="First Name" name="firstName" required />
-            <Field label="Last Name" name="lastName" required />
-            {!isEdit && <Field label="Email Address" name="email" type="email" required />}
-            {!isEdit && <Field label="Password" name="password" type="password" />}
-            <Field label="Phone" name="phone" type="tel" />
-            <Field label="Date of Birth" name="dateOfBirth" type="date" />
-            <Field label="Gender" name="gender" options={[{value:'male',label:'Male'},{value:'female',label:'Female'},{value:'other',label:'Other'}]} />
-            <Field label="CNIC / B-Form" name="cnic" />
-            <Field label="City" name="city" />
-            <Field label="Admission Date" name="admissionDate" type="date" />
+            <Field label="First Name" name="firstName" required value={form.firstName} onChange={handleChange} />
+            <Field label="Last Name" name="lastName" required value={form.lastName} onChange={handleChange} />
+            {!isEdit && <Field label="Email Address" name="email" type="email" required value={form.email} onChange={handleChange} />}
+            {!isEdit && <Field label="Password" name="password" type="password" value={form.password} onChange={handleChange} />}
+            <Field label="Phone" name="phone" type="tel" value={form.phone} onChange={handleChange} />
+            <Field label="Date of Birth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} />
+            <Field label="Gender" name="gender" value={form.gender} onChange={handleChange}
+              options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} />
+            <Field label="CNIC / B-Form" name="cnic" value={form.cnic} onChange={handleChange} />
+            <Field label="City" name="city" value={form.city} onChange={handleChange} />
+            <Field label="Admission Date" name="admissionDate" type="date" value={form.admissionDate} onChange={handleChange} />
           </div>
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-            <textarea value={form.address} onChange={e => set('address', e.target.value)} rows={2}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+            <textarea
+              value={form.address}
+              onChange={e => handleChange('address', e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
           </div>
         </section>
 
@@ -128,9 +170,9 @@ export default function StudentForm() {
         <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h3 className="font-semibold text-gray-900 mb-4">Academic Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Class / Grade" name="class" />
-            <Field label="Section" name="section" />
-            <Field label="Roll Number" name="rollNumber" />
+            <Field label="Class / Grade" name="class" value={form.class} onChange={handleChange} />
+            <Field label="Section" name="section" value={form.section} onChange={handleChange} />
+            <Field label="Roll Number" name="rollNumber" value={form.rollNumber} onChange={handleChange} />
           </div>
         </section>
 
@@ -138,13 +180,13 @@ export default function StudentForm() {
         <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h3 className="font-semibold text-gray-900 mb-4">Scholarship</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Scholarship Type" name="scholarshipType"
-              options={[{value:'none',label:'None'},{value:'partial',label:'Partial'},{value:'full',label:'Full'}]} />
+            <Field label="Scholarship Type" name="scholarshipType" value={form.scholarshipType} onChange={handleChange}
+              options={[{ value: 'none', label: 'None' }, { value: 'partial', label: 'Partial' }, { value: 'full', label: 'Full' }]} />
             {form.scholarshipType !== 'none' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Percentage (%)</label>
                 <input type="number" min={0} max={100} value={form.scholarshipPercentage}
-                  onChange={e => set('scholarshipPercentage', Number(e.target.value))}
+                  onChange={e => handleChange('scholarshipPercentage', e.target.value)}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             )}
@@ -155,15 +197,15 @@ export default function StudentForm() {
         <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h3 className="font-semibold text-gray-900 mb-4">Guardian Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Guardian Name" name="guardianName" />
-            <Field label="Guardian Phone" name="guardianPhone" type="tel" />
-            <Field label="Relationship" name="guardianRelationship"
-              options={[{value:'father',label:'Father'},{value:'mother',label:'Mother'},{value:'guardian',label:'Guardian'}]} />
+            <Field label="Guardian Name" name="guardianName" value={form.guardianName} onChange={handleChange} />
+            <Field label="Guardian Phone" name="guardianPhone" type="tel" value={form.guardianPhone} onChange={handleChange} />
+            <Field label="Relationship" name="guardianRelationship" value={form.guardianRelationship} onChange={handleChange}
+              options={[{ value: 'father', label: 'Father' }, { value: 'mother', label: 'Mother' }, { value: 'guardian', label: 'Guardian' }]} />
           </div>
         </section>
 
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={() => router.push(-1)}
+          <button type="button" onClick={() => router.back()}
             className="px-5 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
             Cancel
           </button>

@@ -1,6 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-const API_BASE = '/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -9,11 +9,14 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ─── Request interceptor: attach access token ─────────────────────────────────
+// ─── Request interceptor: attach access token (only in browser) ─────────────
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem('accessToken');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // Only access localStorage in browser environment
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('accessToken');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
@@ -49,15 +52,26 @@ api.interceptors.response.use(
       try {
         const { data } = await api.post('/auth/refresh');
         const newToken = data.data.accessToken;
-        localStorage.setItem('accessToken', newToken);
+        
+        // Only access localStorage in browser environment
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('accessToken', newToken);
+          window.location.href = '/login';
+        }
+        
         api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
         processQueue(null, newToken);
         original.headers.Authorization = `Bearer ${newToken}`;
         return api(original);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        localStorage.removeItem('accessToken');
-        window.location.href = '/login';
+        
+        // Only access localStorage in browser environment
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          window.location.href = '/login';
+        }
+        
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

@@ -105,10 +105,10 @@ export default function Students() {
                     <td>
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm flex-shrink-0">
-                          {s.firstName[0]}{s.lastName[0]}
+                          {s.firstName?.[0] ?? ''}{s.lastName?.[0] ?? ''}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{s.firstName} {s.lastName}</p>
+                          <p className="font-medium text-gray-900">{(s.firstName ?? '') + (s.lastName ? ' ' + s.lastName : '')}</p>
                           <p className="text-xs text-gray-400">{s.user?.email}</p>
                         </div>
                       </div>

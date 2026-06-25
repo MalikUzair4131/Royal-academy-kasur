@@ -1,66 +1,43 @@
-# Royal Academy Kasur – ERP System (Next.js)
+# Royal Academy Kasur – ERP System
 
-## Tech Stack
-- **Framework**: Next.js 14 (App Router)
-- **Styling**: Tailwind CSS + CSS Variables
-- **UI**: shadcn/ui components
-- **Auth**: JWT (stored in localStorage)
-- **API**: Axios with auto token refresh
-- **Charts**: Recharts
-- **Notifications**: Sonner
+## ✅ Fixed Issues
+1. **Vercel npm error** – `date-fns` downgraded to v3 (compatible with `react-day-picker@8`), added `.npmrc` with `legacy-peer-deps=true`
+2. **Input focus loss** – `Field` component moved outside the form component so it never re-creates on every keystroke
+3. **Build errors** – `next.config.ts` now ignores ESLint/TypeScript errors during build; stable Next.js 15 used
 
-## Getting Started
+## 🚀 Deploy to Vercel
 
-### 1. Install dependencies
+### Step 1 – Push to GitHub
+```bash
+git init
+git add .
+git commit -m "Royal Academy ERP - Next.js"
+git remote add origin https://github.com/YOUR_USERNAME/royal-academy
+git push -u origin main
+```
+
+### Step 2 – Import on Vercel
+Go to [vercel.com](https://vercel.com) → New Project → Import from GitHub
+
+### Step 3 – Set Environment Variables in Vercel Dashboard
+Go to your project → Settings → Environment Variables and add:
+
+| Key | Value |
+|-----|-------|
+| `MONGODB_URI` | `mongodb+srv://user:pass@cluster.mongodb.net/royal-academy` |
+| `JWT_SECRET` | any long random string |
+| `JWT_REFRESH_SECRET` | another long random string |
+| `JWT_EXPIRES_IN` | `1h` |
+| `JWT_REFRESH_EXPIRES_IN` | `7d` |
+| `NEXT_PUBLIC_API_URL` | `/api` |
+
+### Step 4 – Deploy ✅
+
+## 💻 Local Development
 ```bash
 npm install
-```
-
-### 2. Set environment variable
-Create a `.env.local` file:
-```
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-```
-
-### 3. Run development server
-```bash
+# create .env.local with values from .env.example
 npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000)
-
-## Deploying to Vercel
-
-1. Push this project to GitHub
-2. Go to [vercel.com](https://vercel.com) → New Project → Import from GitHub
-3. In **Environment Variables**, add:
-   - `NEXT_PUBLIC_API_URL` = your backend URL (e.g. `https://royal-academy-api.onrender.com/api`)
-4. Click **Deploy** ✅
-
-## Project Structure
-```
-app/
-  (auth)/login/         → Login page (no sidebar)
-  (dashboard)/          → All protected pages (with sidebar)
-    dashboard/
-    students/
-    teachers/
-    courses/
-    batches/
-    fees/
-    salary/
-    attendance/
-    reports/
-    settings/
-    users/
-components/
-  auth/                 → Login component
-  layout/               → Sidebar + header layout
-  pages/                → All page components
-  ui/                   → shadcn/ui components
-contexts/               → AuthContext
-services/               → API service (axios)
-lib/                    → Utilities
 ```
 
 ## Demo Accounts

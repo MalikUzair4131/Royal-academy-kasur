@@ -107,7 +107,7 @@ export default function Reports() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="type" tick={{ fontSize: 11, fill: '#9ca3af' }} />
                     <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(v: number) => `PKR ${v.toLocaleString()}`} />
+                    <Tooltip formatter={(v: any) => `PKR ${v.toLocaleString()}`} />
                     <Bar dataKey="collected" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Collected" />
                     <Bar dataKey="pending" fill="#fbbf24" radius={[4, 4, 0, 0]} name="Pending" />
                   </BarChart>
@@ -129,7 +129,7 @@ export default function Reports() {
                         <Cell key={index} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number) => `PKR ${v.toLocaleString()}`} />
+                    <Tooltip formatter={(v: any) => `PKR ${v.toLocaleString()}`} />
                     <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
                   </PieChart>
                 </ResponsiveContainer>

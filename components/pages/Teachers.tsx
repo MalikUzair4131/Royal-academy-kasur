@@ -83,10 +83,10 @@ export default function Teachers() {
                     <td>
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-semibold text-sm flex-shrink-0">
-                          {t.firstName[0]}{t.lastName[0]}
+                          {t.firstName?.[0] ?? ''}{t.lastName?.[0] ?? ''}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{t.firstName} {t.lastName}</p>
+                          <p className="font-medium text-gray-900">{(t.firstName ?? '') + (t.lastName ? ' ' + t.lastName : '')}</p>
                           <p className="text-xs text-gray-400">{t.user?.email}</p>
                         </div>
                       </div>

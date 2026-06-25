@@ -88,7 +88,7 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {user?.name?.split(' ')[0]} 👋
+            Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {user?.name ? user.name.split(' ')[0] : ''} 👋
           </h1>
           <p className="text-gray-500 text-sm mt-0.5">{format(new Date(), 'EEEE, MMMM d, yyyy')} · {user?.branch?.name || 'Royal Academy'}</p>
         </div>
@@ -133,7 +133,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9ca3af' }} />
                 <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => [`PKR ${v.toLocaleString()}`, 'Collected']} />
+                <Tooltip formatter={(v: any) => [`PKR ${typeof v === 'number' ? v.toLocaleString() : v}`, 'Collected']} />
                 <Area type="monotone" dataKey="collected" stroke="#3b82f6" strokeWidth={2} fill="url(#colorRevenue)" />
               </AreaChart>
             </ResponsiveContainer>

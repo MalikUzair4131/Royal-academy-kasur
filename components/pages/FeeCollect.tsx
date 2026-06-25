@@ -54,7 +54,7 @@ export function FeeCollect() {
   return (
     <div className="max-w-2xl">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.push(-1)} className="p-2 rounded-lg hover:bg-gray-100"><ArrowLeft className="w-5 h-5 text-gray-600" /></button>
+        <button onClick={() => router.back()} className="p-2 rounded-lg hover:bg-gray-100"><ArrowLeft className="w-5 h-5 text-gray-600" /></button>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Create Fee Record</h1>
           <p className="text-gray-500 text-sm">Generate a new fee for a student</p>
@@ -130,7 +130,7 @@ export function FeeCollect() {
         </div>
 
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={() => router.push(-1)} className="px-5 py-2.5 rounded-xl border border-gray-300 text-sm font-medium hover:bg-gray-50 transition">Cancel</button>
+          <button type="button" onClick={() => router.back()} className="px-5 py-2.5 rounded-xl border border-gray-300 text-sm font-medium hover:bg-gray-50 transition">Cancel</button>
           <button type="submit" disabled={saving} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 transition shadow-sm">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Create Fee Record
@@ -198,10 +198,10 @@ export function OverdueFees() {
                     <td><span className="badge-red">{f.overduedays} days</span></td>
                     <td>
                       {f.student?.guardians?.[0]?.phone && (
-                        <a href={`tel:${f.student.guardians[0].phone}`} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700">
-                          <Phone className="w-3 h-3" />{f.student.guardians[0].phone}
-                        </a>
-                      )}
+                          <a href={`tel:${f.student?.guardians?.[0]?.phone}`} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700">
+                            <Phone className="w-3 h-3" />{f.student?.guardians?.[0]?.phone}
+                          </a>
+                        )}
                     </td>
                   </tr>
                 ))}

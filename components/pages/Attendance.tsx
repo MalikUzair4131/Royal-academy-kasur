@@ -123,11 +123,11 @@ export default function Attendance() {
             <div className="divide-y divide-gray-50">
               {students.map(s => (
                 <div key={s._id} className="flex items-center px-4 py-3 gap-4">
-                  <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm flex-shrink-0">
-                    {s.firstName[0]}{s.lastName[0]}
+                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm flex-shrink-0">
+                    {s.firstName?.[0] ?? ''}{s.lastName?.[0] ?? ''}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm">{s.firstName} {s.lastName}</p>
+                    <p className="font-medium text-gray-900 text-sm">{(s.firstName ?? '') + (s.lastName ? ' ' + s.lastName : '')}</p>
                     <p className="text-xs text-gray-400">{s.studentId}</p>
                   </div>
                   <div className="flex items-center gap-1">

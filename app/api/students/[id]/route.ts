@@ -5,7 +5,7 @@ import { withAuth, unauthorized, notFound, serverError } from '@/lib/middleware'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await withAuth(request as any);
@@ -13,7 +13,8 @@ export async function GET(
 
     await connectDB();
 
-    const student = await Student.findById(params.id)
+    const { id } = await params;
+    const student = await Student.findById(id)
       .populate('userId', 'email name')
       .populate('branch', 'name')
       .populate('enrollments.course', 'name code')
@@ -35,7 +36,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await withAuth(request as any);
@@ -43,9 +44,10 @@ export async function PUT(
 
     await connectDB();
 
+    const { id } = await params;
     const body = await request.json();
     const student = await Student.findByIdAndUpdate(
-      params.id,
+      id,
       { $set: body },
       { new: true }
     ).populate('userId', 'email name').populate('branch', 'name');
@@ -66,7 +68,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await withAuth(request as any);
@@ -74,8 +76,9 @@ export async function DELETE(
 
     await connectDB();
 
+    const { id } = await params;
     const student = await Student.findByIdAndUpdate(
-      params.id,
+      id,
       { isActive: false },
       { new: true }
     );

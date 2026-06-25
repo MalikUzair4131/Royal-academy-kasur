@@ -5,7 +5,7 @@ import { withAuth, unauthorized, notFound, serverError } from '@/lib/middleware'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await withAuth(request as any);
@@ -13,8 +13,9 @@ export async function GET(
 
     await connectDB();
 
+    const { id } = await params;
     const teacher = await User.findOne({
-      _id: params.id,
+      _id: id,
       role: 'teacher',
     }).select('-password');
 
@@ -34,7 +35,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await withAuth(request as any);
@@ -42,9 +43,10 @@ export async function PUT(
 
     await connectDB();
 
+    const { id } = await params;
     const body = await request.json();
     const teacher = await User.findByIdAndUpdate(
-      params.id,
+      id,
       { $set: body },
       { new: true }
     ).select('-password');

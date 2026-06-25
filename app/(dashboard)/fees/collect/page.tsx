@@ -1,4 +1,4 @@
-import FeeCollect from "@/components/pages/FeeCollect";
+import { FeeCollect } from "@/components/pages/FeeCollect";
 export default function FeeCollectPage() {
   return <FeeCollect />;
 }
