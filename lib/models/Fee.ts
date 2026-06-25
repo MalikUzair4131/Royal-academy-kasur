@@ -27,7 +27,7 @@ export interface IFee extends Document {
 
 const FeeSchema = new Schema<IFee>(
   {
-    receiptNo: { type: String, required: true, unique: true },
+    receiptNo: { type: String, required: true, unique: true, default: () => `FEE-${Date.now()}-${Math.floor(100 + Math.random() * 900)}` },
     student: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
     batch: { type: Schema.Types.ObjectId, ref: 'Batch' },
     course: { type: Schema.Types.ObjectId, ref: 'Course' },

@@ -4,6 +4,7 @@ import { Student } from '@/lib/models/Student';
 import { User } from '@/lib/models/User';
 import { Course } from '@/lib/models/Course';
 import { Batch } from '@/lib/models/Batch';
+import { Class } from '@/lib/models/Class';
 import mongoose from 'mongoose';
 import { withAuth, unauthorized, badRequest, notFound } from '@/lib/middleware';
 
@@ -103,15 +104,47 @@ export async function POST(request: NextRequest) {
     const scholarshipPercentage = Number((body as any).scholarshipPercentage || 0);
     (body as any).scholarshipPercentage = Number.isNaN(scholarshipPercentage) ? 0 : scholarshipPercentage;
 
+    // Resolve `class` when provided as a human-friendly name instead of ObjectId
+    if ((body as any).class && !mongoose.Types.ObjectId.isValid(String((body as any).class))) {
+      const className = String((body as any).class).trim();
+      let cls = await Class.findOne({ name: className, branch });
+      if (!cls) {
+        // generate a code for the class
+        const cleaned = className.replace(/[^a-zA-Z0-9]+/g, '-').replace(/-+/g, '-').toUpperCase();
+        const code = `${cleaned}-${Math.floor(100 + Math.random() * 900)}`;
+        cls = await Class.create({ name: className, code, branch });
+      }
+      (body as any).class = cls._id;
+    }
     // Validate enrollments (course/batch ids)
     if (Array.isArray((body as any).enrollments)) {
       for (const en of (body as any).enrollments) {
+        // allow human-friendly names: try to resolve or create Course/Batch by name
         if (en.course && !mongoose.Types.ObjectId.isValid(String(en.course))) {
-          return NextResponse.json({ success: false, message: 'Invalid course id in enrollments' }, { status: 400 });
+          const courseName = String(en.course).trim();
+          let c = await Course.findOne({ name: courseName, branch });
+          if (!c) {
+            const cleaned = courseName.replace(/[^a-zA-Z0-9]+/g, '-').replace(/-+/g, '-').toUpperCase();
+            const code = `${cleaned}-${Math.floor(100 + Math.random() * 900)}`;
+            c = await Course.create({ name: courseName, code, branch });
+          }
+          en.course = c._id;
         }
+
         if (en.batch && !mongoose.Types.ObjectId.isValid(String(en.batch))) {
-          return NextResponse.json({ success: false, message: 'Invalid batch id in enrollments' }, { status: 400 });
+          const batchName = String(en.batch).trim();
+          let b = await Batch.findOne({ name: batchName, branch });
+          if (!b) {
+            const cleaned = batchName.replace(/[^a-zA-Z0-9]+/g, '-').replace(/-+/g, '-').toUpperCase();
+            const code = `${cleaned}-${Math.floor(100 + Math.random() * 900)}`;
+            const payload: any = { name: batchName, code, branch };
+            // if class provided in body, link it to batch
+            if ((body as any).class) payload.class = (body as any).class;
+            b = await Batch.create(payload);
+          }
+          en.batch = b._id;
         }
+        // verify ids now
         if (en.course) {
           const c = await Course.findById(en.course);
           if (!c) return NextResponse.json({ success: false, message: `Course ${en.course} not found` }, { status: 400 });

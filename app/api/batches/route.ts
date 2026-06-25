@@ -65,10 +65,10 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { name, course, branch } = body;
+    const { name, course, class: classId, branch } = body;
 
-    if (!name || !course) {
-      return badRequest('Name and course are required');
+    if (!name) {
+      return badRequest('Name is required');
     }
 
     const authUser = await User.findById((user as any)._id).select('branch');
@@ -79,11 +79,17 @@ export async function POST(request: NextRequest) {
 
     const batchCode = body.code || generateBatchCode(name);
 
-    const batch = await Batch.create({
+    const payload: any = {
       ...body,
       branch: batchBranch,
       code: batchCode,
-    });
+    };
+
+    // Accept either `course` or `class` (for school-oriented deployments). Prefer explicit ids.
+    if (classId) payload.class = classId;
+    else if (course) payload.course = course;
+
+    const batch = await Batch.create(payload);
 
     return NextResponse.json(
       {

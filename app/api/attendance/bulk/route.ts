@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { records } = body; // Array of attendance records
+    const { records, date, type } = body; // Array of attendance records
 
     if (!Array.isArray(records)) {
       return NextResponse.json(
@@ -20,7 +20,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await Attendance.insertMany(records);
+    // Apply shared fields (date/type) to each record so backend-required fields are present
+    const normalized = records.map((r: any) => ({
+      ...r,
+      date: r.date ? new Date(r.date) : date ? new Date(date) : new Date(),
+      type: r.type || type || 'student',
+    }));
+
+    const result = await Attendance.insertMany(normalized);
 
     return NextResponse.json(
       {
