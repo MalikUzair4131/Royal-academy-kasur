@@ -30,7 +30,7 @@ export async function GET(
     );
   } catch (error) {
     console.error('Student get error:', error);
-    return serverError();
+    return NextResponse.json({ success: false, message: (error as any).message || 'Failed to get student' }, { status: 400 });
   }
 }
 
@@ -62,7 +62,7 @@ export async function PUT(
     );
   } catch (error) {
     console.error('Student update error:', error);
-    return serverError();
+    return NextResponse.json({ success: false, message: (error as any).message || 'Failed to update student' }, { status: 400 });
   }
 }
 
@@ -93,6 +93,6 @@ export async function DELETE(
     );
   } catch (error) {
     console.error('Student delete error:', error);
-    return serverError();
+    return NextResponse.json({ success: false, message: (error as any).message || 'Failed to delete student' }, { status: 400 });
   }
 }
