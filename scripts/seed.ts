@@ -2,9 +2,16 @@ import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/db';
 import { User } from '@/lib/models/User';
 import { Branch } from '@/lib/models/Branch';
+import bcrypt from 'bcryptjs';
+import { connectDB } from '@/lib/db';
+import { User } from '@/lib/models/User';
+import { Branch } from '@/lib/models/Branch';
 import { Course } from '@/lib/models/Course';
 import { Batch } from '@/lib/models/Batch';
 import { Student } from '@/lib/models/Student';
+import { Class } from '@/lib/models/Class';
+import { Fee } from '@/lib/models/Fee';
+import { Attendance } from '@/lib/models/Attendance';
 
 async function hashPasswords<T extends { password: string }>(items: T[]) {
   return Promise.all(items.map(async (item) => ({
@@ -77,16 +84,6 @@ const demoBranches = [
     state: 'Sindh',
     isActive: true,
   },
-  {
-    name: 'North Branch',
-    code: 'NORTH-002',
-    address: 'Islamabad, ICT',
-    phone: '+92-51-87654321',
-    email: 'north@royalacademy.com',
-    city: 'Islamabad',
-    state: 'ICT',
-    isActive: true,
-  },
 ];
 
 async function seed() {
@@ -100,15 +97,18 @@ async function seed() {
     await Course.deleteMany({});
     await Batch.deleteMany({});
     await Student.deleteMany({});
+    await Class.deleteMany({});
+    await Fee.deleteMany({});
+    await Attendance.deleteMany({});
     console.log('✓ Cleared existing data');
 
-    // Create branches
+    // Create branch
     const branches = await Branch.insertMany(demoBranches);
-    console.log(`✓ Created ${branches.length} branches`);
+    console.log(`✓ Created ${branches.length} branch`);
 
     // Create users with hashed passwords
     const usersWithBranch = await hashPasswords(
-      demoUsers.map((user, idx) => ({
+      demoUsers.map((user) => ({
         ...user,
         branch: user.role === 'teacher' ? branches[0]._id : undefined,
       }))
@@ -117,154 +117,133 @@ async function seed() {
     const users = await User.insertMany(usersWithBranch);
     console.log(`✓ Created ${users.length} users`);
 
-    // Create courses
+    // Create classes (Grades)
+    const classNames = [
+      'Junior Grade',
+      'Grade 9',
+      'Grade 10',
+      'Grade 11',
+      'Grade 12',
+      'Supplementary Students',
+    ];
+
+    const classes = await Class.insertMany(classNames.map((name, idx) => ({
+      name,
+      code: `CL-${100 + idx}`,
+      description: `${name} class`,
+      branch: branches[0]._id,
+      isActive: true,
+    })));
+    console.log(`✓ Created ${classes.length} classes`);
+
+    // Create batches for each class for 2026 and 2027
+    const batchesToCreate: any[] = [];
+    classes.forEach((c: any) => {
+      ['2026', '2027'].forEach((year) => {
+        batchesToCreate.push({
+          name: `${c.name} Batch ${year}`,
+          code: `${c.code}-${year}`,
+          class: c._id,
+          startDate: new Date(`${year}-01-01`),
+          endDate: new Date(`${year}-12-31`),
+          schedule: 'Mon-Fri 9:00 AM - 1:00 PM',
+          maxStudents: 100,
+          instructor: users.find((u) => u.role === 'teacher')?._id,
+          branch: branches[0]._id,
+          isActive: true,
+        });
+      });
+    });
+
+    const batches = await Batch.insertMany(batchesToCreate);
+    console.log(`✓ Created ${batches.length} class batches`);
+
+    // Create a simple course to keep compatibility
     const courses = await Course.insertMany([
       {
-        name: 'Web Development Bootcamp',
-        code: 'WEB-101',
-        description: 'Learn HTML, CSS, JavaScript and React',
-        instructor: users.find(u => u.role === 'teacher')?._id,
-        duration: 12,
-        fee: 50000,
-        branch: branches[0]._id,
-        isActive: true,
-      },
-      {
-        name: 'Data Science Fundamentals',
-        code: 'DS-101',
-        description: 'Python, Data Analysis and Machine Learning',
-        instructor: users.find(u => u.email === 'fatima.ali@royalacademy.com')?._id,
-        duration: 16,
-        fee: 60000,
-        branch: branches[0]._id,
-        isActive: true,
-      },
-      {
-        name: 'Graphic Design Course',
-        code: 'GD-101',
-        description: 'Learn Adobe Suite and Design Principles',
-        instructor: users.find(u => u.role === 'teacher')?._id,
-        duration: 8,
-        fee: 35000,
-        branch: branches[1]._id,
-        isActive: true,
-      },
-    ]);
-    console.log(`✓ Created ${courses.length} courses`);
-
-    // Create batches
-    const batches = await Batch.insertMany([
-      {
-        name: 'Web Dev Batch - Spring 2026',
-        code: 'WEB-S26',
-        course: courses[0]._id,
-        startDate: new Date('2026-03-01'),
-        endDate: new Date('2026-06-01'),
-        schedule: 'Mon-Wed-Fri 9:00 AM - 11:00 AM',
-        maxStudents: 30,
-        instructor: users.find(u => u.role === 'teacher')?._id,
-        branch: branches[0]._id,
-        isActive: true,
-      },
-      {
-        name: 'Data Science Batch - Spring 2026',
-        code: 'DS-S26',
-        course: courses[1]._id,
-        startDate: new Date('2026-03-15'),
-        endDate: new Date('2026-07-15'),
-        schedule: 'Tue-Thu 2:00 PM - 4:00 PM',
-        maxStudents: 25,
-        instructor: users.find(u => u.email === 'fatima.ali@royalacademy.com')?._id,
+        name: 'Intro Course',
+        code: 'INTRO-001',
+        description: 'Compatibility course',
+        instructor: users.find((u) => u.role === 'teacher')?._id,
+        duration: 4,
+        fee: 1000,
         branch: branches[0]._id,
         isActive: true,
       },
     ]);
-    console.log(`✓ Created ${batches.length} batches`);
 
-    // Create demo students
-    const studentUsers = await User.insertMany(
-      await hashPasswords([
-        {
-          name: 'Ali Ahmed',
-          email: 'ali.ahmed@student.royalacademy.com',
-          password: 'Student@123',
-          role: 'student',
-          isActive: true,
-          permissions: [
-            { module: 'dashboard', actions: ['view'] },
-            { module: 'attendance', actions: ['view'] },
-            { module: 'fees', actions: ['view'] },
-          ],
-        },
-        {
-          name: 'Sara Khan',
-          email: 'sara.khan@student.royalacademy.com',
-          password: 'Student@123',
-          role: 'student',
-          isActive: true,
-          permissions: [
-            { module: 'dashboard', actions: ['view'] },
-            { module: 'attendance', actions: ['view'] },
-            { module: 'fees', actions: ['view'] },
-          ],
-        },
-        {
-          name: 'Hassan Malik',
-          email: 'hassan.malik@student.royalacademy.com',
-          password: 'Student@123',
-          role: 'student',
-          isActive: true,
-          permissions: [
-            { module: 'dashboard', actions: ['view'] },
-            { module: 'attendance', actions: ['view'] },
-            { module: 'fees', actions: ['view'] },
-          ],
-        },
-      ])
-    );
-
-    const students = await Student.insertMany(
-      studentUsers.map((user, idx) => ({
-        userId: user._id,
-        studentId: `STU-${2026001 + idx}`,
-        firstName: user.name.split(' ')[0],
-        lastName: user.name.split(' ')[1],
-        phone: '+92-3001234567',
-        admissionDate: new Date(),
-        branch: branches[0]._id,
-        enrollments: [
-          {
-            course: courses[0]._id,
-            batch: batches[0]._id,
-            status: 'enrolled',
-            enrollDate: new Date(),
-          },
+    // Create demo student user
+    const [demoUser] = await User.insertMany(await hashPasswords([
+      {
+        name: 'Demo Student',
+        email: 'student@royalacademy.edu.pk',
+        password: 'Student@123',
+        role: 'student',
+        isActive: true,
+        permissions: [
+          { module: 'dashboard', actions: ['view'] },
+          { module: 'attendance', actions: ['view'] },
+          { module: 'fees', actions: ['view'] },
         ],
-        isActive: true,
-      }))
-    );
+      },
+    ]));
 
-    console.log(`✓ Created ${students.length} students`);
+    const grade9 = classes.find((c: any) => c.name === 'Grade 9');
+    const grade9Batch2026 = batches.find((b: any) => String(b.class) === String(grade9._id) && b.code.endsWith('2026'));
+
+    const studentCount = await Student.countDocuments({});
+    const demoStudent = await Student.create({
+      userId: demoUser._id,
+      studentId: `STU-${2026001 + studentCount}`,
+      firstName: 'Demo',
+      lastName: 'Student',
+      email: 'student@royalacademy.edu.pk',
+      phone: '03001234567',
+      admissionDate: new Date(),
+      branch: branches[0]._id,
+      class: grade9._id,
+      rollNumber: 'G9-001',
+      enrollments: [
+        {
+          course: courses[0]._id,
+          batch: grade9Batch2026?._id,
+          status: 'enrolled',
+          enrollDate: new Date(),
+        },
+      ],
+      scholarshipType: 'none',
+      scholarshipPercentage: 0,
+      guardians: [{ name: 'Parent Demo', phone: '03009876543', relationship: 'father' }],
+      isActive: true,
+    });
+
+    // Create fee record
+    if (grade9Batch2026) {
+      await Fee.create({
+        student: demoStudent._id,
+        batch: grade9Batch2026._id,
+        amount: 20000,
+        dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+        description: 'Demo tuition fee',
+        status: 'pending',
+        paidAmount: 0,
+        payments: [],
+      });
+
+      // Create attendance
+      await Attendance.create({
+        student: demoStudent._id,
+        batch: grade9Batch2026._id,
+        date: new Date(),
+        status: 'present',
+        remarks: 'Seed attendance',
+      });
+    }
+
+    console.log('✓ Created demo student and linked records');
 
     console.log('\n✅ Seeding completed successfully!\n');
-    console.log('📝 Test Credentials:');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('Super Admin:');
-    console.log('  Email: superadmin@royalacademy.com');
-    console.log('  Password: SuperAdmin@123');
-    console.log('');
-    console.log('Branch Manager:');
-    console.log('  Email: manager@royalacademy.com');
-    console.log('  Password: Manager@123');
-    console.log('');
-    console.log('Teacher:');
-    console.log('  Email: ahmed.khan@royalacademy.com');
-    console.log('  Password: Teacher@123');
-    console.log('');
-    console.log('Student:');
-    console.log('  Email: ali.ahmed@student.royalacademy.com');
-    console.log('  Password: Student@123');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    console.log('Demo login: student@royalacademy.edu.pk / Student@123');
 
     process.exit(0);
   } catch (error) {
@@ -274,3 +253,4 @@ async function seed() {
 }
 
 seed();
+    console.log('');
