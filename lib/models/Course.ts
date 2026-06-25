@@ -3,10 +3,16 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface ICourse extends Document {
   name: string;
   code: string;
-  description: string;
-  instructor: mongoose.Types.ObjectId;
-  duration: number; // in weeks
-  fee: number;
+  type: string;
+  category?: string;
+  description?: string;
+  instructor?: mongoose.Types.ObjectId;
+  durationMonths?: number;
+  admissionFee?: number;
+  monthlyFee?: number;
+  examFee?: number;
+  certificateFee?: number;
+  maxStudents?: number;
   branch: mongoose.Types.ObjectId;
   isActive: boolean;
   createdAt: Date;
@@ -17,10 +23,16 @@ const CourseSchema = new Schema<ICourse>(
   {
     name: { type: String, required: true },
     code: { type: String, required: true, unique: true },
+    type: { type: String, default: 'training' },
+    category: { type: String },
     description: { type: String },
     instructor: { type: Schema.Types.ObjectId, ref: 'User' },
-    duration: { type: Number },
-    fee: { type: Number, default: 0 },
+    durationMonths: { type: Number },
+    admissionFee: { type: Number, default: 0 },
+    monthlyFee: { type: Number, default: 0 },
+    examFee: { type: Number, default: 0 },
+    certificateFee: { type: Number, default: 0 },
+    maxStudents: { type: Number, default: 30 },
     branch: { type: Schema.Types.ObjectId, ref: 'Branch', required: true },
     isActive: { type: Boolean, default: true },
   },

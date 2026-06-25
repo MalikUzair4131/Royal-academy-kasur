@@ -121,11 +121,11 @@ export default function Students() {
                     </td>
                     <td>
                       <div className="flex flex-wrap gap-1">
-                        {s.enrollments?.filter(e => e.status === 'active').slice(0, 2).map((e, i) => (
+                        {s.enrollments?.filter(e => e.status === 'enrolled').slice(0, 2).map((e, i) => (
                           <span key={i} className="badge-blue">{e.course?.name}</span>
                         ))}
-                        {(s.enrollments?.filter(e => e.status === 'active').length || 0) > 2 && (
-                          <span className="badge-gray">+{s.enrollments.filter(e => e.status === 'active').length - 2}</span>
+                        {(s.enrollments?.filter(e => e.status === 'enrolled').length || 0) > 2 && (
+                          <span className="badge-gray">+{s.enrollments.filter(e => e.status === 'enrolled').length - 2}</span>
                         )}
                       </div>
                     </td>

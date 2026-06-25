@@ -5,11 +5,13 @@ export interface IBatch extends Document {
   code: string;
   course?: mongoose.Types.ObjectId;
   class?: mongoose.Types.ObjectId;
-  startDate: Date;
-  endDate: Date;
-  schedule: string; // e.g., "Mon-Wed-Fri 9AM-11AM"
+  startDate?: Date;
+  endDate?: Date;
+  schedule?: string; // e.g., "Mon-Wed-Fri 9AM-11AM"
   maxStudents: number;
-  instructor: mongoose.Types.ObjectId;
+  status: 'upcoming' | 'active' | 'completed' | 'cancelled';
+  notes?: string;
+  instructor?: mongoose.Types.ObjectId;
   branch: mongoose.Types.ObjectId;
   isActive: boolean;
   createdAt: Date;
@@ -26,6 +28,8 @@ const BatchSchema = new Schema<IBatch>(
     endDate: { type: Date },
     schedule: { type: String },
     maxStudents: { type: Number, default: 30 },
+    status: { type: String, enum: ['upcoming', 'active', 'completed', 'cancelled'], default: 'upcoming' },
+    notes: { type: String },
     instructor: { type: Schema.Types.ObjectId, ref: 'User' },
     branch: { type: Schema.Types.ObjectId, ref: 'Branch', required: true },
     isActive: { type: Boolean, default: true },
