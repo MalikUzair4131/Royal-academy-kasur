@@ -31,12 +31,6 @@ export default function Login() {
     }
   };
 
-  const demoAccounts = [
-    { label: 'Super Admin', email: 'superadmin@royalacademy.com', password: 'Admin@2024!' },
-    { label: 'Branch Admin', email: 'admin@royalacademy.com', password: 'Admin@2024!' },
-    { label: 'Teacher', email: 'teacher@royalacademy.com', password: 'Teacher@2024!' },
-    { label: 'Student', email: 'student@royalacademy.com', password: 'Student@2024!' },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
@@ -97,22 +91,6 @@ export default function Login() {
               {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in...</> : 'Sign In'}
             </button>
           </form>
-
-          {/* Demo accounts */}
-          <div className="mt-6 pt-6 border-t border-white/10">
-            <p className="text-blue-300 text-xs text-center mb-3">Quick Demo Access</p>
-            <div className="grid grid-cols-2 gap-2">
-              {demoAccounts.map(acc => (
-                <button key={acc.label}
-                  onClick={() => { setEmail(acc.email); setPassword(acc.password); }}
-                  className="text-xs py-2 px-3 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-blue-200 hover:text-white transition text-left"
-                >
-                  <div className="font-medium">{acc.label}</div>
-                  <div className="text-white/40 truncate">{acc.email}</div>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         <p className="text-center text-blue-400/60 text-xs mt-6">

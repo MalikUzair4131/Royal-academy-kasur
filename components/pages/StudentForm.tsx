@@ -13,7 +13,7 @@ interface FieldProps {
   options?: { value: string; label: string }[];
   required?: boolean;
   value: string | number;
-  onChange: (name: string, value: string) => void;
+  onChange: (name: string, value: any) => void;
 }
 
 function Field({ label, name, type = 'text', options, required, value, onChange }: FieldProps) {
@@ -91,7 +91,7 @@ export default function StudentForm() {
   }, [id, isEdit]);
 
   // ✅ useCallback prevents handler recreation on each render
-  const handleChange = useCallback((name: string, value: string) => {
+  const handleChange = useCallback((name: string, value: any) => {
     setForm(prev => ({ ...prev, [name]: value }));
   }, []);
 
@@ -105,15 +105,18 @@ export default function StudentForm() {
     try {
       const payload = {
         ...form,
+        scholarshipPercentage: Number(form.scholarshipPercentage) || 0,
         guardians: form.guardianName
           ? [{ name: form.guardianName, phone: form.guardianPhone, relationship: form.guardianRelationship }]
           : []
       };
+      console.log('Student Enrollment Payload:', payload);
       if (isEdit && id) await studentsApi.update(id, payload);
       else await studentsApi.create(payload);
       toast.success(isEdit ? 'Student updated successfully' : 'Student enrolled successfully');
       router.push('/students');
     } catch (err: any) {
+      console.error(err);
       toast.error(err.response?.data?.message || 'Failed to save student');
     } finally {
       setSaving(false);
@@ -186,7 +189,7 @@ export default function StudentForm() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Percentage (%)</label>
                 <input type="number" min={0} max={100} value={form.scholarshipPercentage}
-                  onChange={e => handleChange('scholarshipPercentage', e.target.value)}
+                  onChange={e => handleChange('scholarshipPercentage', Number(e.target.valueAsNumber || 0))}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             )}
