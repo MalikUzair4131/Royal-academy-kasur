@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Student } from '@/lib/models/Student';
+import { User } from '@/lib/models/User';
 import { withAuth, unauthorized, badRequest, serverError, notFound } from '@/lib/middleware';
 
 export async function GET(request: NextRequest) {
@@ -59,22 +60,28 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    const body = await request.json();
-    const { userId, studentId, firstName, lastName, phone, branch } = body;
+      const body = await request.json();
+      const { firstName, lastName, phone } = body;
 
-    if (!studentId || !firstName) {
-      return badRequest('Student ID and first name are required');
-    }
+      if (!firstName) return badRequest('First name is required');
 
-    const newStudent = await Student.create({
-      userId,
-      studentId,
-      firstName,
-      lastName,
-      phone,
-      branch,
-      enrollments: [],
-    });
+      // Determine branch from the authenticated user (if set) otherwise fall back to request body
+      const authUser = await User.findById((user as any)._id).select('branch');
+      const branch = authUser?.branch || (body as any).branch;
+
+      // Generate a simple sequential studentId based on current count.
+      const count = await Student.countDocuments({});
+      const studentId = `STU-${2026000 + count + 1}`;
+
+      const newStudent = await Student.create({
+        userId: (user as any)._id,
+        studentId,
+        firstName,
+        lastName,
+        phone,
+        branch,
+        enrollments: [],
+      });
 
     return NextResponse.json(
       {
