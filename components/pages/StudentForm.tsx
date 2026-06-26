@@ -1,9 +1,19 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { studentsApi, coursesApi } from '@/services/api';
+import { studentsApi } from '@/services/api';
 import { toast } from 'sonner';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+
+// School class list — mirrors seed data
+const SCHOOL_CLASSES = [
+  { value: 'Junior Grade', label: 'Junior Grade' },
+  { value: 'Grade 9', label: 'Grade 9' },
+  { value: 'Grade 10', label: 'Grade 10' },
+  { value: 'Grade 11', label: 'Grade 11' },
+  { value: 'Grade 12', label: 'Grade 12' },
+  { value: 'Supplementary Students', label: 'Supplementary Students' },
+];
 
 // ✅ Field component defined OUTSIDE StudentForm so it never re-creates on every keystroke
 interface FieldProps {
@@ -62,11 +72,9 @@ export default function StudentForm() {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [courses, setCourses] = useState<any[]>([]);
   const [form, setForm] = useState(INITIAL_FORM);
 
   useEffect(() => {
-    coursesApi.list({ isActive: true }).then(r => setCourses(r.data.data)).catch(() => {});
     if (isEdit && id) {
       setLoading(true);
       studentsApi.get(id).then(r => {
@@ -173,7 +181,19 @@ export default function StudentForm() {
         <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h3 className="font-semibold text-gray-900 mb-4">Academic Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Class / Grade" name="class" value={form.class} onChange={handleChange} />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Class / Grade</label>
+              <select
+                value={form.class}
+                onChange={e => handleChange('class', e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              >
+                <option value="">Select class</option>
+                {SCHOOL_CLASSES.map(c => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
             <Field label="Section" name="section" value={form.section} onChange={handleChange} />
             <Field label="Roll Number" name="rollNumber" value={form.rollNumber} onChange={handleChange} />
           </div>

@@ -12,11 +12,15 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
+    const isActive = searchParams.get('isActive');
 
-    const query: any = { role: 'teacher', isActive: true };
+    const query: any = { role: 'teacher' };
+    if (isActive !== null && isActive !== undefined) query.isActive = isActive === 'true';
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
       ];
     }
@@ -25,12 +29,7 @@ export async function GET(request: NextRequest) {
       .select('-password')
       .sort({ createdAt: -1 });
 
-    return NextResponse.json(
-      {
-        data: teachers,
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({ data: teachers }, { status: 200 });
   } catch (error) {
     console.error('Teachers list error:', error);
     return serverError();
@@ -45,16 +44,42 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { name, email, password } = body;
 
-    if (!name || !email || !password) {
-      return badRequest('Name, email and password are required');
+    // Support both `name` (legacy) and `firstName`+`lastName` (form)
+    const firstName = (body.firstName || '').trim();
+    const lastName = (body.lastName || '').trim();
+    const fullName = body.name || [firstName, lastName].filter(Boolean).join(' ');
+
+    const email = (body.email || '').trim().toLowerCase();
+    const password = body.password || 'teacher123';
+
+    if (!firstName && !fullName) {
+      return badRequest('First name is required');
     }
+    if (!email) {
+      return badRequest('Email is required');
+    }
+
+    // Check email duplicate
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return badRequest('A user with this email already exists');
+    }
+
+    // Auto-generate teacherId
+    const teacherCount = await User.countDocuments({ role: 'teacher' });
+    const teacherId = `TEA-${new Date().getFullYear()}-${String(teacherCount + 1).padStart(4, '0')}`;
 
     const teacher = await User.create({
       ...body,
+      name: fullName,
+      firstName,
+      lastName,
+      email,
+      password,
       role: 'teacher',
-      email: email.toLowerCase(),
+      teacherId,
+      isActive: true,
     });
 
     return NextResponse.json(
@@ -62,8 +87,11 @@ export async function POST(request: NextRequest) {
         data: {
           _id: teacher._id,
           name: teacher.name,
+          firstName: (teacher as any).firstName,
+          lastName: (teacher as any).lastName,
           email: teacher.email,
           role: teacher.role,
+          teacherId,
         },
       },
       { status: 201 }

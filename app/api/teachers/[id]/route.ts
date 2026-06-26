@@ -14,19 +14,11 @@ export async function GET(
     await connectDB();
 
     const { id } = await params;
-    const teacher = await User.findOne({
-      _id: id,
-      role: 'teacher',
-    }).select('-password');
+    const teacher = await User.findOne({ _id: id, role: 'teacher' }).select('-password');
 
     if (!teacher) return notFound();
 
-    return NextResponse.json(
-      {
-        data: teacher,
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({ data: teacher }, { status: 200 });
   } catch (error) {
     console.error('Teacher get error:', error);
     return serverError();
@@ -45,20 +37,30 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
+
+    // Merge firstName/lastName into name if provided
+    const updateData: any = { ...body };
+    const firstName = (body.firstName || '').trim();
+    const lastName = (body.lastName || '').trim();
+    if (firstName || lastName) {
+      updateData.name = [firstName, lastName].filter(Boolean).join(' ');
+      updateData.firstName = firstName;
+      updateData.lastName = lastName;
+    }
+
+    // Never allow changing role or password through this route
+    delete updateData.role;
+    delete updateData.password;
+
     const teacher = await User.findByIdAndUpdate(
       id,
-      { $set: body },
+      { $set: updateData },
       { new: true }
     ).select('-password');
 
     if (!teacher) return notFound();
 
-    return NextResponse.json(
-      {
-        data: teacher,
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({ data: teacher }, { status: 200 });
   } catch (error) {
     console.error('Teacher update error:', error);
     return serverError();

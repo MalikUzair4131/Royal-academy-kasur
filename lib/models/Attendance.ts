@@ -15,9 +15,10 @@ const AttendanceSchema = new Schema<IAttendance>(
   {
     student: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
     batch: { type: Schema.Types.ObjectId, ref: 'Batch' },
-    date: { type: Date, required: true },
+    class: { type: Schema.Types.ObjectId, ref: 'Class' },
+    date: { type: Date, required: true, default: Date.now },
     status: { type: String, enum: ['present', 'absent', 'leave', 'late'], default: 'absent' },
-    type: { type: String, enum: ['student', 'teacher'] },
+    type: { type: String, enum: ['student', 'teacher'], default: 'student' },
     remarks: { type: String },
   },
   { timestamps: true }

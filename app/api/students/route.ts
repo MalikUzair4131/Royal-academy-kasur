@@ -73,11 +73,18 @@ export async function POST(request: NextRequest) {
 
     // Determine branch from the authenticated user (if set) otherwise fall back to request body
     const authUser = await User.findById((user as any)._id).select('branch');
-    const branch = authUser?.branch || (body as any).branch;
+    let branch = authUser?.branch || (body as any).branch;
+
+    // Last resort: use first active branch in DB (single-branch schools)
+    if (!branch || !mongoose.Types.ObjectId.isValid(String(branch))) {
+      const { Branch } = await import('@/lib/models/Branch');
+      const firstBranch = await Branch.findOne({ isActive: true });
+      if (firstBranch) branch = firstBranch._id;
+    }
 
     // Validate branch id
     if (!branch || !mongoose.Types.ObjectId.isValid(String(branch))) {
-      return NextResponse.json({ success: false, message: 'Branch is required and must be a valid id' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'No branch found in the system. Run the seed script first.' }, { status: 400 });
     }
 
     // Email validation & duplicate check
@@ -160,9 +167,34 @@ export async function POST(request: NextRequest) {
     const count = await Student.countDocuments({});
     const studentId = `STU-${2026000 + count + 1}`;
 
+    // Auto-create a User account for this student (required by userId foreign key)
+    let userId = (body as any).userId;
+    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+      const emailForUser = email || `${studentId.toLowerCase()}@royalacademy.edu.pk`;
+      let existingUser = email ? await User.findOne({ email: emailForUser }) : null;
+      if (!existingUser) {
+        existingUser = await User.create({
+          name: `${firstName} ${lastName || ''}`.trim(),
+          firstName,
+          lastName: lastName || '',
+          email: emailForUser,
+          password: (body as any).password || 'student123',
+          role: 'student',
+          branch,
+          isActive: true,
+          permissions: [
+            { module: 'dashboard', actions: ['view'] },
+            { module: 'fees', actions: ['view'] },
+            { module: 'attendance', actions: ['view'] },
+          ],
+        });
+      }
+      userId = existingUser._id;
+    }
+
     const payload = {
       ...body,
-      userId: (user as any)._id,
+      userId,
       studentId,
       branch,
       enrollments: (body as any).enrollments || [],

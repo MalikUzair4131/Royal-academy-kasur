@@ -3,11 +3,30 @@ import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   password: string;
   role: 'super_admin' | 'branch_admin' | 'teacher' | 'student' | 'parent';
   branch?: mongoose.Types.ObjectId;
   isActive: boolean;
+  teacherId?: string;
+  // Teacher-specific fields stored on User for simplicity
+  phone?: string;
+  qualification?: string;
+  specialization?: string;
+  experience?: number;
+  gender?: string;
+  dateOfBirth?: Date;
+  cnic?: string;
+  address?: string;
+  joiningDate?: Date;
+  salaryType?: string;
+  fixedSalary?: number;
+  revenueSharePercentage?: number;
+  bankAccount?: string;
+  bankName?: string;
+  notes?: string;
   permissions: Array<{
     module: string;
     actions: ('view' | 'create' | 'edit' | 'delete' | 'manage')[];
@@ -20,6 +39,8 @@ export interface IUser extends Document {
 const UserSchema = new Schema<IUser>(
   {
     name: { type: String, required: true },
+    firstName: { type: String },
+    lastName: { type: String },
     email: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true },
     role: {
@@ -29,6 +50,23 @@ const UserSchema = new Schema<IUser>(
     },
     branch: { type: Schema.Types.ObjectId, ref: 'Branch' },
     isActive: { type: Boolean, default: true },
+    teacherId: { type: String },
+    // Teacher profile fields
+    phone: { type: String },
+    qualification: { type: String },
+    specialization: { type: String },
+    experience: { type: Number },
+    gender: { type: String },
+    dateOfBirth: { type: Date },
+    cnic: { type: String },
+    address: { type: String },
+    joiningDate: { type: Date },
+    salaryType: { type: String, default: 'fixed' },
+    fixedSalary: { type: Number, default: 0 },
+    revenueSharePercentage: { type: Number, default: 0 },
+    bankAccount: { type: String },
+    bankName: { type: String },
+    notes: { type: String },
     permissions: [
       {
         module: String,
@@ -55,8 +93,8 @@ UserSchema.pre('save', async function (next) {
 // Auto-generate teacherId for teacher users if missing
 UserSchema.pre('save', async function (next) {
   try {
-    if (this.role === 'teacher' && !this.teacherId) {
-      this.teacherId = `TEA-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    if (this.role === 'teacher' && !(this as any).teacherId) {
+      (this as any).teacherId = `TEA-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     }
     next();
   } catch (err) {

@@ -215,12 +215,18 @@ async function seed() {
 
     // Create fee record
     if (grade9Batch2026) {
+      const feeReceiptNo = `FEE-${Date.now()}-SEED`;
       await Fee.create({
+        receiptNo: feeReceiptNo,
         student: demoStudent._id,
         batch: grade9Batch2026._id,
+        feeType: 'monthly',
+        month: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+        originalAmount: 20000,
+        netAmount: 20000,
         amount: 20000,
         dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-        description: 'Demo tuition fee',
+        description: 'Demo monthly tuition fee',
         status: 'pending',
         paidAmount: 0,
         payments: [],
@@ -239,7 +245,12 @@ async function seed() {
     console.log('✓ Created demo student and linked records');
 
     console.log('\n✅ Seeding completed successfully!\n');
-    console.log('Demo login: student@royalacademy.edu.pk / Student@123');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('Admin login  : superadmin@royalacademy.com / SuperAdmin@123');
+    console.log('Manager login: manager@royalacademy.com   / Manager@123');
+    console.log('Teacher login: ahmed.khan@royalacademy.com / Teacher@123');
+    console.log('Student login: student@royalacademy.edu.pk / Student@123');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     process.exit(0);
   } catch (error) {
@@ -249,4 +260,3 @@ async function seed() {
 }
 
 seed();
-    console.log('');

@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import { Class } from '@/lib/models/Class';
 import { User } from '@/lib/models/User';
 import { withAuth, unauthorized, badRequest, serverError } from '@/lib/middleware';
+import mongoose from 'mongoose';
 
 function generateClassCode(name: string) {
   const cleaned = name
@@ -46,13 +47,25 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { name, code, branch } = body;
+    const { name, code, description } = body;
 
     if (!name) return badRequest('Name is required');
 
+    // Resolve branch: from body first, then from logged-in user's branch
+    const authUser = await User.findById((user as any)._id).select('branch');
+    const branch = body.branch || authUser?.branch;
+    if (!branch) return badRequest('Branch could not be determined. Please contact an administrator.');
+
+    // Auto-generate code if not supplied
     const classCode = code || generateClassCode(name);
 
-    const cls = await Class.create({ name, code: classCode, branch });
+    // Avoid duplicate name in same branch
+    const existing = await Class.findOne({ name: name.trim(), branch });
+    if (existing) {
+      return NextResponse.json({ success: false, message: `A class named "${name}" already exists` }, { status: 400 });
+    }
+
+    const cls = await Class.create({ name: name.trim(), code: classCode, description, branch, isActive: true });
 
     return NextResponse.json({ data: cls }, { status: 201 });
   } catch (error) {

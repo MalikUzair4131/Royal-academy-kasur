@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { batchesApi, coursesApi, teachersApi } from '@/services/api';
+import { batchesApi, teachersApi } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Calendar, Loader2, Edit2, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,55 +10,92 @@ const STATUS_STYLE: Record<string, string> = {
   upcoming: 'badge-yellow', active: 'badge-green', completed: 'badge-gray', cancelled: 'badge-red'
 };
 
+// School classes — these mirror the seed data and the Classes collection
+const SCHOOL_CLASSES = [
+  'Junior Grade',
+  'Grade 9',
+  'Grade 10',
+  'Grade 11',
+  'Grade 12',
+  'Supplementary Students',
+];
+
+const EMPTY_FORM = {
+  name: '', className: '', instructor: '', startDate: '', endDate: '',
+  status: 'upcoming', maxStudents: 30, schedule: '', notes: ''
+};
+
 export default function Batches() {
   const { hasPermission } = useAuth();
   const [batches, setBatches] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [total, setTotal] = useState(0);
-  const [form, setForm] = useState({
-    name: '', course: '', instructor: '', startDate: '', endDate: '',
-    status: 'upcoming', maxStudents: 20, notes: ''
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [bd, cd, td] = await Promise.all([
+      const [bd, td] = await Promise.all([
         batchesApi.list({}),
-        coursesApi.list({ isActive: true }),
-        teachersApi.list({ isActive: true })
+        teachersApi.list({ isActive: true }),
       ]);
       setBatches(bd.data.data);
       setTotal(bd.data.total ?? bd.data.data.length);
-      setCourses(cd.data.data); setTeachers(td.data.data);
-    } catch { toast.error('Failed to load batches'); }
-    finally { setLoading(false); }
+      setTeachers(td.data.data);
+    } catch {
+      toast.error('Failed to load batches');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   const handleSave = async () => {
-    if (!form.name || !form.course) { toast.error('Batch name and course are required'); return; }
+    if (!form.name) { toast.error('Batch name is required'); return; }
     try {
-      if (editing) await batchesApi.update(editing._id, form);
-      else await batchesApi.create(form);
+      // Build payload — className is human-readable, backend resolves/creates Class
+      const payload: any = {
+        name: form.name,
+        status: form.status,
+        maxStudents: form.maxStudents,
+        schedule: form.schedule,
+        notes: form.notes,
+        startDate: form.startDate || undefined,
+        endDate: form.endDate || undefined,
+        instructor: form.instructor || undefined,
+      };
+      // Pass class name as a string; the API will resolve or create it
+      if (form.className) payload.className = form.className;
+
+      if (editing) await batchesApi.update(editing._id, payload);
+      else await batchesApi.create(payload);
+
       toast.success(editing ? 'Batch updated' : 'Batch created');
-      setShowForm(false); setEditing(null);
-      setForm({ name: '', course: '', instructor: '', startDate: '', endDate: '', status: 'upcoming', maxStudents: 20, notes: '' });
+      setShowForm(false);
+      setEditing(null);
+      setForm(EMPTY_FORM);
       load();
-    } catch (err: any) { toast.error(err.response?.data?.message || 'Failed to save batch'); }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to save batch');
+    }
   };
 
   const openEdit = (b: any) => {
     setEditing(b);
     setForm({
-      name: b.name, course: b.course?._id || '', instructor: b.instructor?._id || '',
-      startDate: b.startDate?.slice(0, 10) || '', endDate: b.endDate?.slice(0, 10) || '',
-      status: b.status, maxStudents: b.maxStudents, notes: b.notes || ''
+      name: b.name,
+      className: b.class?.name || b.className || '',
+      instructor: b.instructor?._id || '',
+      startDate: b.startDate?.slice(0, 10) || '',
+      endDate: b.endDate?.slice(0, 10) || '',
+      status: b.status,
+      maxStudents: b.maxStudents,
+      schedule: b.schedule || '',
+      notes: b.notes || '',
     });
     setShowForm(true);
   };
@@ -71,7 +108,7 @@ export default function Batches() {
           <p className="text-gray-500 text-sm">{total} batches</p>
         </div>
         {hasPermission('courses', 'create') && (
-          <button onClick={() => { setEditing(null); setShowForm(true); }}
+          <button onClick={() => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition shadow-sm">
             <Plus className="w-4 h-4" /> Create Batch
           </button>
@@ -86,7 +123,7 @@ export default function Batches() {
         ) : batches.length === 0 ? (
           <div className="col-span-3 text-center py-16">
             <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">No batches found</p>
+            <p className="text-gray-500 font-medium">No batches yet. Create the first one!</p>
           </div>
         ) : batches.map(b => (
           <div key={b._id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition">
@@ -95,6 +132,9 @@ export default function Batches() {
                 <span className={STATUS_STYLE[b.status] || 'badge-gray'}>{b.status}</span>
                 <h3 className="font-semibold text-gray-900 mt-2">{b.name}</h3>
                 <p className="text-xs text-gray-500">{b.code}</p>
+                {(b.class?.name || b.className) && (
+                  <p className="text-xs text-blue-600 font-medium mt-0.5">{b.class?.name || b.className}</p>
+                )}
               </div>
               {hasPermission('courses', 'edit') && (
                 <button onClick={() => openEdit(b)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition">
@@ -102,15 +142,12 @@ export default function Batches() {
                 </button>
               )}
             </div>
-
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Course</span>
-                <span className="text-gray-900 font-medium">{b.course?.name || '—'}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-gray-500">Instructor</span>
-                <span className="text-gray-900">{b.instructor ? `${b.instructor.firstName} ${b.instructor.lastName}` : '—'}</span>
+                <span className="text-gray-900">
+                  {b.instructor ? `${b.instructor.firstName || ''} ${b.instructor.lastName || b.instructor.name || ''}`.trim() : '—'}
+                </span>
               </div>
               {b.startDate && (
                 <div className="flex justify-between">
@@ -124,13 +161,16 @@ export default function Batches() {
                   <span className="text-gray-900">{format(new Date(b.endDate), 'MMM d, yyyy')}</span>
                 </div>
               )}
+              {b.schedule && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Schedule</span>
+                  <span className="text-gray-900 text-xs">{b.schedule}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between pt-2 border-t border-gray-50">
                 <div className="flex items-center gap-1.5 text-gray-500">
                   <Users className="w-3.5 h-3.5" />
-                  <span>{b.students?.length || 0} / {b.maxStudents} students</span>
-                </div>
-                <div className="h-1.5 w-24 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, ((b.students?.length || 0) / b.maxStudents) * 100)}%` }} />
+                  <span>Max {b.maxStudents} students</span>
                 </div>
               </div>
             </div>
@@ -148,23 +188,27 @@ export default function Batches() {
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-700 mb-1">Batch Name *</label>
                 <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="e.g. Web Dev - Batch A"
+                  placeholder="e.g. Grade 9 – 2026 Batch"
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Course *</label>
-                <select value={form.course} onChange={e => setForm(p => ({ ...p, course: e.target.value }))}
+                <label className="block text-xs font-medium text-gray-700 mb-1">Class / Grade</label>
+                <select value={form.className} onChange={e => setForm(p => ({ ...p, className: e.target.value }))}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Select course</option>
-                  {courses.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                  <option value="">Select class (optional)</option>
+                  {SCHOOL_CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-700 mb-1">Instructor</label>
                 <select value={form.instructor} onChange={e => setForm(p => ({ ...p, instructor: e.target.value }))}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Select instructor</option>
-                  {teachers.map(t => <option key={t._id} value={t._id}>{t.firstName} {t.lastName}</option>)}
+                  <option value="">Select instructor (optional)</option>
+                  {teachers.map(t => (
+                    <option key={t._id} value={t._id}>
+                      {t.firstName && t.lastName ? `${t.firstName} ${t.lastName}` : t.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -193,14 +237,26 @@ export default function Batches() {
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Schedule</label>
+                <input value={form.schedule} onChange={e => setForm(p => ({ ...p, schedule: e.target.value }))}
+                  placeholder="e.g. Mon-Fri 9:00 AM – 1:00 PM"
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="col-span-2">
                 <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
                 <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
               </div>
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium hover:bg-gray-50">Cancel</button>
-              <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition">Save Batch</button>
+              <button onClick={() => { setShowForm(false); setEditing(null); }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium hover:bg-gray-50">
+                Cancel
+              </button>
+              <button onClick={handleSave}
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition">
+                Save Batch
+              </button>
             </div>
           </div>
         </div>

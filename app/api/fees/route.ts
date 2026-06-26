@@ -113,11 +113,12 @@ export async function POST(request: NextRequest) {
 
     const finalOriginal = Number(originalAmount) || 0;
     const finalNet = Number(netAmount ?? finalOriginal) || 0;
-    const finalAmount = Number(amount ?? finalNet) || 0;
+    // `amount` should equal netAmount (the payable amount). Legacy field kept for compatibility.
+    const finalAmount = Number(amount ?? finalNet) || finalNet;
     const finalPaid = Number(paidAmount) || 0;
 
-    const receiptNo = body.receiptNo || `FEE-${Date.now()}`;
-    const status = body.status || (finalPaid >= finalNet ? 'paid' : finalPaid > 0 ? 'partial' : 'pending');
+    const receiptNo = body.receiptNo || `FEE-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const status = body.status || (finalPaid >= finalNet && finalNet > 0 ? 'paid' : finalPaid > 0 ? 'partial' : 'pending');
 
     const fee = await Fee.create({
       ...body,

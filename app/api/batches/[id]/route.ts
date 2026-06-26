@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Batch } from '@/lib/models/Batch';
+import { Class } from '@/lib/models/Class';
 import { User } from '@/lib/models/User';
+import mongoose from 'mongoose';
 import { withAuth, unauthorized, notFound, badRequest, serverError } from '@/lib/middleware';
 
 export async function GET(
@@ -16,8 +18,9 @@ export async function GET(
     const { id } = await params;
 
     const batch = await Batch.findById(id)
+      .populate('class', 'name code')
       .populate('course', 'name code')
-      .populate('instructor', 'firstName lastName email')
+      .populate('instructor', 'firstName lastName name email')
       .populate('branch', 'name code');
 
     if (!batch) return notFound();
@@ -41,26 +44,35 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    if (!body.name || !body.course) {
-      return badRequest('Batch name and course are required');
+    if (!body.name) {
+      return badRequest('Batch name is required');
     }
 
     const authUser = await User.findById((user as any)._id).select('branch');
     const batchBranch = body.branch || authUser?.branch;
-    if (!batchBranch) {
-      return badRequest('Branch is required');
+
+    const updateData: any = { ...body, branch: batchBranch };
+    delete updateData.className;
+
+    // Resolve className to class ObjectId
+    if (body.className) {
+      const className = String(body.className).trim();
+      let cls = await Class.findOne({ name: className, branch: batchBranch });
+      if (!cls) {
+        const cleaned = className.replace(/[^a-zA-Z0-9]+/g, '-').toUpperCase();
+        const code = `${cleaned.slice(0, 10)}-${Math.floor(100 + Math.random() * 900)}`;
+        cls = await Class.create({ name: className, code, branch: batchBranch, isActive: true });
+      }
+      updateData.class = cls._id;
+    } else if (body.class && mongoose.Types.ObjectId.isValid(String(body.class))) {
+      updateData.class = body.class;
     }
 
     const updatedBatch = await Batch.findByIdAndUpdate(
       id,
-      {
-        $set: {
-          ...body,
-          branch: batchBranch,
-        },
-      },
+      { $set: updateData },
       { new: true }
-    );
+    ).populate('class', 'name code');
 
     if (!updatedBatch) return notFound();
 
