@@ -101,12 +101,6 @@ export async function POST(request: NextRequest) {
       (body as any).email = emailLower;
     }
 
-    // Roll number duplicate check (within same class & branch)
-    if (rollNumber) {
-      const exists = await Student.findOne({ rollNumber: rollNumber, class: (body as any).class || null, branch });
-      if (exists) return NextResponse.json({ success: false, message: 'Roll number already exists for this class/branch' }, { status: 400 });
-    }
-
     // Normalize scholarshipPercentage
     const scholarshipPercentage = Number((body as any).scholarshipPercentage || 0);
     (body as any).scholarshipPercentage = Number.isNaN(scholarshipPercentage) ? 0 : scholarshipPercentage;
@@ -122,6 +116,12 @@ export async function POST(request: NextRequest) {
         cls = await Class.create({ name: className, code, branch });
       }
       (body as any).class = cls._id;
+    }
+
+    // Roll number duplicate check (within same class & branch)
+    if (rollNumber) {
+      const exists = await Student.findOne({ rollNumber: rollNumber, class: (body as any).class || null, branch });
+      if (exists) return NextResponse.json({ success: false, message: 'Roll number already exists for this class/branch' }, { status: 400 });
     }
     // Validate enrollments (course/batch ids)
     if (Array.isArray((body as any).enrollments)) {

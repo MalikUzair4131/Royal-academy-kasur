@@ -55,7 +55,7 @@ function Field({ label, name, type = 'text', options, required, value, onChange 
 }
 
 const INITIAL_FORM = {
-  firstName: '', lastName: '', email: '', password: 'student123',
+  firstName: '', lastName: '', email: '',
   phone: '', dateOfBirth: '', gender: '', address: '', city: '',
   cnic: '', admissionDate: new Date().toISOString().slice(0, 10),
   class: '', section: '', rollNumber: '',
@@ -79,13 +79,15 @@ export default function StudentForm() {
       setLoading(true);
       studentsApi.get(id).then(r => {
         const s = r.data.data;
+        const classValue = s.class && typeof s.class !== 'string' ? (s.class as any).name || String(s.class) : s.class || '';
         setForm(prev => ({
           ...prev,
           firstName: s.firstName || '', lastName: s.lastName || '',
+          email: s.email || '',
           phone: s.phone || '', dateOfBirth: s.dateOfBirth?.slice(0, 10) || '',
           gender: s.gender || '', address: s.address || '', city: s.city || '',
           cnic: s.cnic || '', admissionDate: s.admissionDate?.slice(0, 10) || '',
-          class: s.class || '', section: s.section || '', rollNumber: s.rollNumber || '',
+          class: classValue, section: s.section || '', rollNumber: s.rollNumber || '',
           scholarshipType: s.scholarshipType || 'none',
           scholarshipPercentage: s.scholarshipPercentage || 0,
           guardianName: s.guardians?.[0]?.name || '',
@@ -105,19 +107,27 @@ export default function StudentForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.firstName || !form.lastName || (!isEdit && !form.email)) {
-      toast.error('First name, last name, and email are required');
+    if (!form.firstName || !form.lastName) {
+      toast.error('First name and last name are required');
+      return;
+    }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      toast.error('Please enter a valid email address');
       return;
     }
     setSaving(true);
     try {
+      const { password, guardianName, guardianPhone, guardianRelationship, ...rest } = form;
       const payload = {
-        ...form,
+        ...rest,
         scholarshipPercentage: Number(form.scholarshipPercentage) || 0,
-        guardians: form.guardianName
-          ? [{ name: form.guardianName, phone: form.guardianPhone, relationship: form.guardianRelationship }]
+        guardians: guardianName
+          ? [{ name: guardianName, phone: guardianPhone, relationship: guardianRelationship }]
           : []
       };
+      if (!isEdit) {
+        payload['password'] = password;
+      }
       console.log('Student Enrollment Payload:', payload);
       if (isEdit && id) await studentsApi.update(id, payload);
       else await studentsApi.create(payload);
@@ -156,8 +166,7 @@ export default function StudentForm() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="First Name" name="firstName" required value={form.firstName} onChange={handleChange} />
             <Field label="Last Name" name="lastName" required value={form.lastName} onChange={handleChange} />
-            {!isEdit && <Field label="Email Address" name="email" type="email" required value={form.email} onChange={handleChange} />}
-            {!isEdit && <Field label="Password" name="password" type="password" value={form.password} onChange={handleChange} />}
+            <Field label="Email Address" name="email" type="email" value={form.email} onChange={handleChange} />
             <Field label="Phone" name="phone" type="tel" value={form.phone} onChange={handleChange} />
             <Field label="Date of Birth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} />
             <Field label="Gender" name="gender" value={form.gender} onChange={handleChange}
