@@ -111,20 +111,22 @@ export async function PUT(
 
     const branch = existingStudent.branch;
 
-    if (body.email) {
-      const emailLower = String(body.email).toLowerCase();
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(emailLower)) {
-        return NextResponse.json({ success: false, message: 'Invalid email format' }, { status: 400 });
-      }
-      const existingUser = await User.findOne({ email: emailLower, _id: { $ne: existingStudent.userId } });
-      if (existingUser) {
-        return NextResponse.json({ success: false, message: 'Email already exists' }, { status: 400 });
-      }
-      body.email = emailLower;
-      if (existingStudent.userId) {
-        await User.findByIdAndUpdate(existingStudent.userId, { email: emailLower });
-      }
+    if (!body.firstName) return badRequest('First name is required');
+    if (!body.lastName) return badRequest('Last name is required');
+    if (!body.email) return badRequest('Email is required');
+
+    const emailLower = String(body.email).toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailLower)) {
+      return NextResponse.json({ success: false, message: 'Invalid email format' }, { status: 400 });
+    }
+    const existingUser = await User.findOne({ email: emailLower, _id: { $ne: existingStudent.userId } });
+    if (existingUser) {
+      return NextResponse.json({ success: false, message: 'Email already exists' }, { status: 400 });
+    }
+    body.email = emailLower;
+    if (existingStudent.userId) {
+      await User.findByIdAndUpdate(existingStudent.userId, { email: emailLower });
     }
 
     if (body.class) {

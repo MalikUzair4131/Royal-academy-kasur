@@ -107,11 +107,11 @@ export default function StudentForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.firstName || !form.lastName) {
-      toast.error('First name and last name are required');
+    if (!form.firstName || !form.lastName || !form.email) {
+      toast.error('First name, last name, and email are required');
       return;
     }
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       toast.error('Please enter a valid email address');
       return;
     }
@@ -128,14 +128,26 @@ export default function StudentForm() {
       if (!isEdit) {
         payload['password'] = password;
       }
-      console.log('Student Enrollment Payload:', payload);
-      if (isEdit && id) await studentsApi.update(id, payload);
-      else await studentsApi.create(payload);
+      console.log('Student Enrollment Payload:', payload, 'studentsApi', studentsApi);
+      if (isEdit && id) {
+        if (typeof studentsApi.update !== 'function') {
+          throw new Error('studentsApi.update is not a function');
+        }
+        await studentsApi.update(id, payload);
+      } else {
+        if (typeof studentsApi.create !== 'function') {
+          throw new Error('studentsApi.create is not a function');
+        }
+        await studentsApi.create(payload);
+      }
       toast.success(isEdit ? 'Student updated successfully' : 'Student enrolled successfully');
+      if (typeof router.push !== 'function') {
+        throw new Error('router.push is not a function');
+      }
       router.push('/students');
     } catch (err: any) {
-      console.error(err);
-      toast.error(err.response?.data?.message || 'Failed to save student');
+      console.error('Student form submission failed', err);
+      toast.error(err.response?.data?.message || err.message || 'Failed to save student');
     } finally {
       setSaving(false);
     }
@@ -166,7 +178,7 @@ export default function StudentForm() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="First Name" name="firstName" required value={form.firstName} onChange={handleChange} />
             <Field label="Last Name" name="lastName" required value={form.lastName} onChange={handleChange} />
-            <Field label="Email Address" name="email" type="email" value={form.email} onChange={handleChange} />
+            <Field label="Email Address" name="email" type="email" required value={form.email} onChange={handleChange} />
             <Field label="Phone" name="phone" type="tel" value={form.phone} onChange={handleChange} />
             <Field label="Date of Birth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} />
             <Field label="Gender" name="gender" value={form.gender} onChange={handleChange}

@@ -70,6 +70,8 @@ export async function POST(request: NextRequest) {
     const { firstName, lastName, phone, email, rollNumber } = body as any;
 
     if (!firstName) return badRequest('First name is required');
+    if (!lastName) return badRequest('Last name is required');
+    if (!email) return badRequest('Email is required');
 
     // Determine branch from the authenticated user (if set) otherwise fall back to request body
     const authUser = await User.findById((user as any)._id).select('branch');
