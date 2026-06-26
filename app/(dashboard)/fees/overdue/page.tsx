@@ -1,4 +1,4 @@
-import Fees from "@/components/pages/Fees";
+import { OverdueFees } from "@/components/pages/FeeCollect";
 export default function OverdueFeesPage() {
-  return <Fees />;
+  return <OverdueFees />;
 }

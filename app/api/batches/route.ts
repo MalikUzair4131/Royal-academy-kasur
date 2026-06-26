@@ -4,7 +4,7 @@ import { Batch } from '@/lib/models/Batch';
 import { Class } from '@/lib/models/Class';
 import { User } from '@/lib/models/User';
 import mongoose from 'mongoose';
-import { withAuth, unauthorized, badRequest, serverError } from '@/lib/middleware';
+import { withAuth, authError, unauthorized, badRequest, serverError } from '@/lib/middleware';
 
 function generateBatchCode(name: string) {
   const cleaned = name
@@ -19,7 +19,7 @@ function generateBatchCode(name: string) {
 export async function GET(request: NextRequest) {
   try {
     const user = await withAuth(request as any);
-    if (!user) return unauthorized();
+    if (!user) return authError(request as any);
 
     await connectDB();
 
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await withAuth(request as any);
-    if (!user) return unauthorized();
+    if (!user) return authError(request as any);
 
     await connectDB();
 

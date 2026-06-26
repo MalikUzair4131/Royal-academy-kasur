@@ -40,11 +40,11 @@ const navItems: NavItem[] = [
     ]
   },
   {
-    label: 'Courses & Batches', icon: <BookOpen className="w-4 h-4" />, module: 'courses',
+    label: 'Classes & Sessions', icon: <BookOpen className="w-4 h-4" />, module: 'courses',
     roles: ['super_admin','branch_admin','teacher'],
     children: [
-      { label: 'Courses', to: '/courses', icon: <BookOpen className="w-3.5 h-3.5" /> },
-      { label: 'Batches', to: '/batches', icon: <Calendar className="w-3.5 h-3.5" /> },
+      { label: 'Classes', to: '/courses', icon: <BookOpen className="w-3.5 h-3.5" /> },
+      { label: 'Sessions', to: '/batches', icon: <Calendar className="w-3.5 h-3.5" /> },
     ]
   },
   {

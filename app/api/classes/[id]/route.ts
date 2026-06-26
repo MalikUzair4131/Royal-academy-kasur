@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Class } from '@/lib/models/Class';
-import { withAuth, unauthorized, badRequest, notFound, serverError } from '@/lib/middleware';
+import { withAuth, authError, unauthorized, badRequest, notFound, serverError } from '@/lib/middleware';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await withAuth(request as any);
-    if (!user) return unauthorized();
+    if (!user) return authError(request as any);
 
     await connectDB();
     const { id } = await params;
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await withAuth(request as any);
-    if (!user) return unauthorized();
+    if (!user) return authError(request as any);
 
     await connectDB();
     const { id } = await params;
@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await withAuth(request as any);
-    if (!user) return unauthorized();
+    if (!user) return authError(request as any);
 
     await connectDB();
     const { id } = await params;

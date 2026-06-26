@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Attendance } from '@/lib/models/Attendance';
-import { withAuth, unauthorized, serverError } from '@/lib/middleware';
+import { withAuth, authError, unauthorized, serverError } from '@/lib/middleware';
 
 export async function POST(request: NextRequest) {
   try {
     const user = await withAuth(request as any);
-    if (!user) return unauthorized();
+    if (!user) return authError(request as any);
 
     await connectDB();
 

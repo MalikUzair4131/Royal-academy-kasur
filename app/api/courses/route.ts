@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Course } from '@/lib/models/Course';
 import { User } from '@/lib/models/User';
-import { withAuth, unauthorized, badRequest, serverError } from '@/lib/middleware';
+import { withAuth, authError, unauthorized, badRequest, serverError } from '@/lib/middleware';
 
 function generateCourseCode(name: string) {
   const cleaned = name
@@ -17,7 +17,7 @@ function generateCourseCode(name: string) {
 export async function GET(request: NextRequest) {
   try {
     const user = await withAuth(request as any);
-    if (!user) return unauthorized();
+    if (!user) return authError(request as any);
 
     await connectDB();
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await withAuth(request as any);
-    if (!user) return unauthorized();
+    if (!user) return authError(request as any);
 
     await connectDB();
 

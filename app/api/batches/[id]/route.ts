@@ -4,7 +4,7 @@ import { Batch } from '@/lib/models/Batch';
 import { Class } from '@/lib/models/Class';
 import { User } from '@/lib/models/User';
 import mongoose from 'mongoose';
-import { withAuth, unauthorized, notFound, badRequest, serverError } from '@/lib/middleware';
+import { withAuth, authError, unauthorized, notFound, badRequest, serverError } from '@/lib/middleware';
 
 export async function GET(
   request: NextRequest,
@@ -12,7 +12,7 @@ export async function GET(
 ) {
   try {
     const user = await withAuth(request as any);
-    if (!user) return unauthorized();
+    if (!user) return authError(request as any);
 
     await connectDB();
     const { id } = await params;
@@ -38,7 +38,7 @@ export async function PUT(
 ) {
   try {
     const user = await withAuth(request as any);
-    if (!user) return unauthorized();
+    if (!user) return authError(request as any);
 
     await connectDB();
     const { id } = await params;
@@ -89,7 +89,7 @@ export async function DELETE(
 ) {
   try {
     const user = await withAuth(request as any);
-    if (!user) return unauthorized();
+    if (!user) return authError(request as any);
 
     await connectDB();
     const { id } = await params;

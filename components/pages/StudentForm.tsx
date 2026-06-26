@@ -1,67 +1,54 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { studentsApi } from '@/services/api';
+import { studentsApi, classesApi, sessionsApi } from '@/services/api';
 import { toast } from 'sonner';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 
-// School class list — mirrors seed data
-const SCHOOL_CLASSES = [
-  { value: 'Junior Grade', label: 'Junior Grade' },
-  { value: 'Grade 9', label: 'Grade 9' },
-  { value: 'Grade 10', label: 'Grade 10' },
-  { value: 'Grade 11', label: 'Grade 11' },
-  { value: 'Grade 12', label: 'Grade 12' },
-  { value: 'Supplementary Students', label: 'Supplementary Students' },
-];
-
-// ✅ Field component defined OUTSIDE StudentForm so it never re-creates on every keystroke
+// ── Reusable field components ──────────────────────────────────────────────────
 interface FieldProps {
-  label: string;
-  name: string;
-  type?: string;
+  label: string; name: string; type?: string; required?: boolean;
+  value: string | number; onChange: (n: string, v: any) => void;
   options?: { value: string; label: string }[];
-  required?: boolean;
-  value: string | number;
-  onChange: (name: string, value: any) => void;
+  placeholder?: string;
 }
-
-function Field({ label, name, type = 'text', options, required, value, onChange }: FieldProps) {
+function Field({ label, name, type = 'text', required, value, onChange, options, placeholder }: FieldProps) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       {options ? (
-        <select
-          value={value}
-          onChange={e => onChange(name, e.target.value)}
-          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-        >
+        <select value={value} onChange={e => onChange(name, e.target.value)}
+          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
           <option value="">Select {label}</option>
           {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       ) : (
-        <input
-          type={type}
-          value={value}
-          onChange={e => onChange(name, e.target.value)}
-          required={required}
-          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <input type={type} value={value} placeholder={placeholder}
+          onChange={e => onChange(name, e.target.value)} required={required}
+          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       )}
     </div>
   );
 }
 
 const INITIAL_FORM = {
-  firstName: '', lastName: '', email: '',
-  phone: '', dateOfBirth: '', gender: '', address: '', city: '',
-  cnic: '', admissionDate: new Date().toISOString().slice(0, 10),
-  class: '', section: '', rollNumber: '',
+  // Personal Info (shown on form)
+  firstName: '', lastName: '', email: '', password: 'student123',
+  phone: '', dateOfBirth: '', gender: '',
+  cnic: '', address: '', city: '',
+  admissionDate: new Date().toISOString().slice(0, 10),
+  // Academic Info (shown on form)
+  classId: '',      // user picks a Class from dropdown → sent as `class` ObjectId
+  sessionId: '',    // user picks a Session/Batch from dropdown → added to enrollments
+  section: '', rollNumber: '',
+  // Scholarship
   scholarshipType: 'none', scholarshipPercentage: 0,
+  // Guardian
   guardianName: '', guardianPhone: '', guardianRelationship: 'father',
-  notes: ''
+  // Notes
+  notes: '',
 };
 
 export default function StudentForm() {
@@ -72,92 +59,114 @@ export default function StudentForm() {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
   const [form, setForm] = useState(INITIAL_FORM);
 
+  // Load classes and sessions for dropdowns
   useEffect(() => {
-    if (isEdit && id) {
-      setLoading(true);
-      studentsApi.get(id).then(r => {
-        const s = r.data.data;
-        const classValue = s.class && typeof s.class !== 'string' ? (s.class as any).name || String(s.class) : s.class || '';
-        setForm(prev => ({
-          ...prev,
-          firstName: s.firstName || '', lastName: s.lastName || '',
-          email: s.email || '',
-          phone: s.phone || '', dateOfBirth: s.dateOfBirth?.slice(0, 10) || '',
-          gender: s.gender || '', address: s.address || '', city: s.city || '',
-          cnic: s.cnic || '', admissionDate: s.admissionDate?.slice(0, 10) || '',
-          class: classValue, section: s.section || '', rollNumber: s.rollNumber || '',
-          scholarshipType: s.scholarshipType || 'none',
-          scholarshipPercentage: s.scholarshipPercentage || 0,
-          guardianName: s.guardians?.[0]?.name || '',
-          guardianPhone: s.guardians?.[0]?.phone || '',
-          guardianRelationship: s.guardians?.[0]?.relationship || 'father',
-          notes: s.notes || ''
-        }));
-      }).catch(() => toast.error('Failed to load student'))
-        .finally(() => setLoading(false));
-    }
+    classesApi.list({ isActive: true }).then(r => setClasses(r.data.data || [])).catch(() => {});
+    sessionsApi.list({ isActive: true }).then(r => setSessions(r.data.data || [])).catch(() => {});
+  }, []);
+
+  // Filter sessions by selected class
+  const filteredSessions = form.classId
+    ? sessions.filter(s => s.class && (s.class._id === form.classId || s.class === form.classId))
+    : sessions;
+
+  // Load existing student for edit
+  useEffect(() => {
+    if (!isEdit || !id) return;
+    setLoading(true);
+    studentsApi.get(id).then(r => {
+      const s = r.data.data;
+      const classId = s.class?._id || s.class || '';
+      const sessionId = s.enrollments?.[0]?.batch?._id || s.enrollments?.[0]?.batch || '';
+      setForm(prev => ({
+        ...prev,
+        firstName: s.firstName || '', lastName: s.lastName || '',
+        phone: s.phone || '', dateOfBirth: s.dateOfBirth?.slice(0, 10) || '',
+        gender: s.gender || '', cnic: s.cnic || '',
+        address: s.address || '', city: s.city || '',
+        admissionDate: s.admissionDate?.slice(0, 10) || '',
+        classId, sessionId, section: s.section || '', rollNumber: s.rollNumber || '',
+        scholarshipType: s.scholarshipType || 'none',
+        scholarshipPercentage: s.scholarshipPercentage || 0,
+        guardianName: s.guardians?.[0]?.name || '',
+        guardianPhone: s.guardians?.[0]?.phone || '',
+        guardianRelationship: s.guardians?.[0]?.relationship || 'father',
+        notes: s.notes || '',
+      }));
+    }).catch(() => toast.error('Failed to load student')).finally(() => setLoading(false));
   }, [id, isEdit]);
 
-  // ✅ useCallback prevents handler recreation on each render
   const handleChange = useCallback((name: string, value: any) => {
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm(prev => {
+      const next = { ...prev, [name]: value };
+      // When class changes, reset session selection
+      if (name === 'classId') next.sessionId = '';
+      return next;
+    });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.firstName || !form.lastName || !form.email) {
-      toast.error('First name, last name, and email are required');
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      toast.error('Please enter a valid email address');
-      return;
-    }
+    if (!form.firstName) { toast.error('First name is required'); return; }
+    if (!isEdit && !form.email) { toast.error('Email is required'); return; }
+
     setSaving(true);
     try {
-      const { password, guardianName, guardianPhone, guardianRelationship, ...rest } = form;
-      const payload = {
-        ...rest,
+      // Build the payload that matches the Student schema exactly:
+      // - `class` = ObjectId of selected class (backend auto-resolves name too)
+      // - `enrollments` = array with batch ObjectId
+      // - `userId`, `studentId`, `branch` → auto-generated by backend
+      const payload: any = {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email || undefined,
+        password: form.password || 'student123',
+        phone: form.phone || undefined,
+        dateOfBirth: form.dateOfBirth || undefined,
+        gender: form.gender || undefined,
+        cnic: form.cnic || undefined,
+        address: form.address || undefined,
+        city: form.city || undefined,
+        admissionDate: form.admissionDate,
+        section: form.section || undefined,
+        rollNumber: form.rollNumber || undefined,
+        scholarshipType: form.scholarshipType || 'none',
         scholarshipPercentage: Number(form.scholarshipPercentage) || 0,
-        guardians: guardianName
-          ? [{ name: guardianName, phone: guardianPhone, relationship: guardianRelationship }]
-          : []
+        notes: form.notes || undefined,
+        guardians: form.guardianName
+          ? [{ name: form.guardianName, phone: form.guardianPhone, relationship: form.guardianRelationship }]
+          : [],
       };
-      if (!isEdit) {
-        payload['password'] = password;
+
+      // Send classId as `class` (ObjectId)
+      if (form.classId) payload.class = form.classId;
+
+      // Build enrollments array if a session was selected
+      if (form.sessionId) {
+        payload.enrollments = [{
+          batch: form.sessionId,
+          status: 'enrolled',
+          enrollDate: new Date().toISOString(),
+        }];
       }
-      console.log('Student Enrollment Payload:', payload, 'studentsApi', studentsApi);
-      if (isEdit && id) {
-        if (typeof studentsApi.update !== 'function') {
-          throw new Error('studentsApi.update is not a function');
-        }
-        await studentsApi.update(id, payload);
-      } else {
-        if (typeof studentsApi.create !== 'function') {
-          throw new Error('studentsApi.create is not a function');
-        }
-        await studentsApi.create(payload);
-      }
+
+      if (isEdit && id) await studentsApi.update(id, payload);
+      else await studentsApi.create(payload);
+
       toast.success(isEdit ? 'Student updated successfully' : 'Student enrolled successfully');
-      if (typeof router.push !== 'function') {
-        throw new Error('router.push is not a function');
-      }
       router.push('/students');
     } catch (err: any) {
-      console.error('Student form submission failed', err);
-      toast.error(err.response?.data?.message || err.message || 'Failed to save student');
+      toast.error(err.response?.data?.message || 'Failed to save student');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return (
-    <div className="flex justify-center py-16">
-      <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-    </div>
-  );
+  if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
 
   return (
     <div className="max-w-3xl">
@@ -167,7 +176,7 @@ export default function StudentForm() {
         </button>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{isEdit ? 'Edit Student' : 'Enroll New Student'}</h1>
-          <p className="text-gray-500 text-sm">{isEdit ? 'Update student information' : 'Add a new student to the academy'}</p>
+          <p className="text-gray-500 text-sm">{isEdit ? 'Update student information' : 'Register a new student in the academy'}</p>
         </div>
       </div>
 
@@ -177,60 +186,60 @@ export default function StudentForm() {
           <h3 className="font-semibold text-gray-900 mb-4">Personal Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="First Name" name="firstName" required value={form.firstName} onChange={handleChange} />
-            <Field label="Last Name" name="lastName" required value={form.lastName} onChange={handleChange} />
-            <Field label="Email Address" name="email" type="email" required value={form.email} onChange={handleChange} />
+            <Field label="Last Name" name="lastName" value={form.lastName} onChange={handleChange} />
+            {!isEdit && <Field label="Email Address" name="email" type="email" required value={form.email} onChange={handleChange} />}
+            {!isEdit && <Field label="Password" name="password" type="password" value={form.password} onChange={handleChange} placeholder="Default: student123" />}
             <Field label="Phone" name="phone" type="tel" value={form.phone} onChange={handleChange} />
             <Field label="Date of Birth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} />
             <Field label="Gender" name="gender" value={form.gender} onChange={handleChange}
               options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} />
-            <Field label="CNIC / B-Form" name="cnic" value={form.cnic} onChange={handleChange} />
+            <Field label="CNIC / B-Form" name="cnic" value={form.cnic} onChange={handleChange} placeholder="e.g. 35201-1234567-1" />
             <Field label="City" name="city" value={form.city} onChange={handleChange} />
             <Field label="Admission Date" name="admissionDate" type="date" value={form.admissionDate} onChange={handleChange} />
           </div>
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-            <textarea
-              value={form.address}
-              onChange={e => handleChange('address', e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            />
+            <textarea value={form.address} onChange={e => handleChange('address', e.target.value)} rows={2}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
           </div>
         </section>
 
         {/* Academic Info */}
         <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h3 className="font-semibold text-gray-900 mb-4">Academic Information</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Class / Grade</label>
-              <select
-                value={form.class}
-                onChange={e => handleChange('class', e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option value="">Select class</option>
-                {SCHOOL_CLASSES.map(c => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
+              <select value={form.classId} onChange={e => handleChange('classId', e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Select Class</option>
+                {classes.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </div>
-            <Field label="Section" name="section" value={form.section} onChange={handleChange} />
-            <Field label="Roll Number" name="rollNumber" value={form.rollNumber} onChange={handleChange} />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Session / Year</label>
+              <select value={form.sessionId} onChange={e => handleChange('sessionId', e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Select Session</option>
+                {filteredSessions.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+              </select>
+            </div>
+            <Field label="Section" name="section" value={form.section} onChange={handleChange} placeholder="e.g. A, B, C" />
+            <Field label="Roll Number" name="rollNumber" value={form.rollNumber} onChange={handleChange} placeholder="e.g. 001" />
           </div>
         </section>
 
         {/* Scholarship */}
         <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <h3 className="font-semibold text-gray-900 mb-4">Scholarship</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">Scholarship (Optional)</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Scholarship Type" name="scholarshipType" value={form.scholarshipType} onChange={handleChange}
               options={[{ value: 'none', label: 'None' }, { value: 'partial', label: 'Partial' }, { value: 'full', label: 'Full' }]} />
             {form.scholarshipType !== 'none' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Percentage (%)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship %</label>
                 <input type="number" min={0} max={100} value={form.scholarshipPercentage}
-                  onChange={e => handleChange('scholarshipPercentage', Number(e.target.valueAsNumber || 0))}
+                  onChange={e => handleChange('scholarshipPercentage', Number(e.target.value))}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             )}
@@ -246,6 +255,13 @@ export default function StudentForm() {
             <Field label="Relationship" name="guardianRelationship" value={form.guardianRelationship} onChange={handleChange}
               options={[{ value: 'father', label: 'Father' }, { value: 'mother', label: 'Mother' }, { value: 'guardian', label: 'Guardian' }]} />
           </div>
+        </section>
+
+        {/* Notes */}
+        <section className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h3 className="font-semibold text-gray-900 mb-4">Notes (Optional)</h3>
+          <textarea value={form.notes} onChange={e => handleChange('notes', e.target.value)} rows={3} placeholder="Any additional information..."
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
         </section>
 
         <div className="flex justify-end gap-3">

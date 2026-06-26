@@ -9,80 +9,48 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ─── Request interceptor: attach access token (only in browser) ─────────────
+// ─── Request interceptor ──────────────────────────────────────────────────────
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  // Only access localStorage in browser environment
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('accessToken');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token && config.headers) config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// ─── Response interceptor: handle 401 & auto-refresh ─────────────────────────
+// ─── Response interceptor ─────────────────────────────────────────────────────
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: (t: string) => void; reject: (e: unknown) => void }> = [];
-
 const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach(prom => error ? prom.reject(error) : prom.resolve(token!));
+  failedQueue.forEach(p => error ? p.reject(error) : p.resolve(token!));
   failedQueue = [];
 };
 
-api.interceptors.response.use(
-  res => res,
-  async (error: AxiosError) => {
-    const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-
-    if (error.response?.status === 401 && !original._retry &&
-        (error.response.data as any)?.code === 'TOKEN_EXPIRED') {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then(token => {
-          original.headers.Authorization = `Bearer ${token}`;
-          return api(original);
-        });
-      }
-
-      original._retry = true;
-      isRefreshing = true;
-
-      try {
-        const { data } = await api.post('/auth/refresh');
-        const newToken = data.data.accessToken;
-        
-        // Only access localStorage in browser environment
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', newToken);
-          window.location.href = '/login';
-        }
-        
-        api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-        processQueue(null, newToken);
-        original.headers.Authorization = `Bearer ${newToken}`;
-        return api(original);
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-        
-        // Only access localStorage in browser environment
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('accessToken');
-          window.location.href = '/login';
-        }
-        
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
-    }
-
-    return Promise.reject(error);
+api.interceptors.response.use(res => res, async (error: AxiosError) => {
+  const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+  if (error.response?.status === 401 && !original._retry && (error.response.data as any)?.code === 'TOKEN_EXPIRED') {
+    if (isRefreshing) return new Promise((resolve, reject) => { failedQueue.push({ resolve, reject }); })
+      .then(token => { original.headers.Authorization = `Bearer ${token}`; return api(original); });
+    original._retry = true;
+    isRefreshing = true;
+    try {
+      const { data } = await api.post('/auth/refresh');
+      const newToken = data.data.accessToken;
+      if (typeof window !== 'undefined') localStorage.setItem('accessToken', newToken);
+      api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      processQueue(null, newToken);
+      original.headers.Authorization = `Bearer ${newToken}`;
+      return api(original);
+    } catch (err) {
+      processQueue(err, null);
+      if (typeof window !== 'undefined') { localStorage.removeItem('accessToken'); window.location.href = '/login'; }
+      return Promise.reject(err);
+    } finally { isRefreshing = false; }
   }
-);
+  return Promise.reject(error);
+});
 
-// ─── Typed API helpers ────────────────────────────────────────────────────────
+// ─── API helpers ──────────────────────────────────────────────────────────────
 export const authApi = {
   login: (email: string, password: string) => api.post('/auth/login', { email, password }),
   logout: () => api.post('/auth/logout'),
@@ -108,8 +76,6 @@ export const studentsApi = {
   get: (id: string) => api.get(`/students/${id}`),
   create: (data: Record<string, unknown>) => api.post('/students', data),
   update: (id: string, data: Record<string, unknown>) => api.put(`/students/${id}`, data),
-  enroll: (id: string, courseId: string, batchId?: string) =>
-    api.post(`/students/${id}/enroll`, { courseId, batchId }),
   delete: (id: string) => api.delete(`/students/${id}`),
 };
 
@@ -120,19 +86,27 @@ export const teachersApi = {
   update: (id: string, data: Record<string, unknown>) => api.put(`/teachers/${id}`, data),
 };
 
-export const coursesApi = {
-  list: (params?: Record<string, unknown>) => api.get('/courses', { params }),
-  create: (data: Record<string, unknown>) => api.post('/courses', data),
-  update: (id: string, data: Record<string, unknown>) => api.put(`/courses/${id}`, data),
-  delete: (id: string) => api.delete(`/courses/${id}`),
+// classesApi replaces coursesApi — maps to /api/classes
+export const classesApi = {
+  list: (params?: Record<string, unknown>) => api.get('/classes', { params }),
+  create: (data: Record<string, unknown>) => api.post('/classes', data),
+  update: (id: string, data: Record<string, unknown>) => api.put(`/classes/${id}`, data),
+  delete: (id: string) => api.delete(`/classes/${id}`),
 };
 
-export const batchesApi = {
+// Keep coursesApi as alias so old imports don't break
+export const coursesApi = classesApi;
+
+// sessionsApi replaces batchesApi — maps to /api/batches
+export const sessionsApi = {
   list: (params?: Record<string, unknown>) => api.get('/batches', { params }),
   create: (data: Record<string, unknown>) => api.post('/batches', data),
   update: (id: string, data: Record<string, unknown>) => api.put(`/batches/${id}`, data),
-  enroll: (id: string, studentId: string) => api.patch(`/batches/${id}/enroll`, { studentId }),
+  delete: (id: string) => api.delete(`/batches/${id}`),
 };
+
+// Keep batchesApi as alias so old imports don't break
+export const batchesApi = sessionsApi;
 
 export const feesApi = {
   list: (params?: Record<string, unknown>) => api.get('/fees', { params }),
@@ -157,9 +131,7 @@ export const attendanceApi = {
   studentReport: (studentId: string, month: string) => api.get(`/attendance/student/${studentId}/report`, { params: { month } }),
 };
 
-export const dashboardApi = {
-  stats: () => api.get('/dashboard'),
-};
+export const dashboardApi = { stats: () => api.get('/dashboard') };
 
 export const reportsApi = {
   profitLoss: (params?: Record<string, unknown>) => api.get('/reports/profit-loss', { params }),
@@ -173,8 +145,6 @@ export const notificationsApi = {
   markAllRead: () => api.patch('/notifications/mark-all-read'),
 };
 
-export const auditLogsApi = {
-  list: (params?: Record<string, unknown>) => api.get('/audit-logs', { params }),
-};
+export const auditLogsApi = { list: (params?: Record<string, unknown>) => api.get('/audit-logs', { params }) };
 
 export default api;
