@@ -1,4 +1,5 @@
-import Reports from "@/components/pages/Reports";
+import ReportsClient from '@/components/pages/ReportsClient';
+
 export default function ReportSubPage() {
-  return <Reports />;
+  return <ReportsClient />;
 }
