@@ -1,49 +1,123 @@
-# Royal Academy Kasur – ERP System
+## **Laravel School Management System** 
 
-## ✅ Fixed Issues
-1. **Vercel npm error** – `date-fns` downgraded to v3 (compatible with `react-day-picker@8`), added `.npmrc` with `legacy-peer-deps=true`
-2. **Input focus loss** – `Field` component moved outside the form component so it never re-creates on every keystroke
-3. **Build errors** – `next.config.ts` now ignores ESLint/TypeScript errors during build; stable Next.js 15 used
+**LAVSMS** is developed for educational institutions like schools and colleges built on Laravel 8
 
-## 🚀 Deploy to Vercel
+**SCREENSHOTS** 
 
-### Step 1 – Push to GitHub
-```bash
-git init
-git add .
-git commit -m "Royal Academy ERP - Next.js"
-git remote add origin https://github.com/YOUR_USERNAME/royal-academy
-git push -u origin main
-```
+**Dashboard**
+<img src="https://i.ibb.co/D4T0z6T/dashboard.png" alt="dashboard" border="0">
 
-### Step 2 – Import on Vercel
-Go to [vercel.com](https://vercel.com) → New Project → Import from GitHub
+**Login**
+<img src="https://i.ibb.co/Rh1Bfwk/login.png" alt="login" border="0">
 
-### Step 3 – Set Environment Variables in Vercel Dashboard
-Go to your project → Settings → Environment Variables and add:
+**Student Marksheet**
+<img src="https://i.ibb.co/GCgv5ZR/marksheet.png" alt="marksheet" border="0">
 
-| Key | Value |
-|-----|-------|
-| `MONGODB_URI` | `mongodb+srv://user:pass@cluster.mongodb.net/royal-academy` |
-| `JWT_SECRET` | any long random string |
-| `JWT_REFRESH_SECRET` | another long random string |
-| `JWT_EXPIRES_IN` | `1h` |
-| `JWT_REFRESH_EXPIRES_IN` | `7d` |
-| `NEXT_PUBLIC_API_URL` | `/api` |
+**System Settings**
+<img src="https://i.ibb.co/Kmrhw69/system-settings.png" alt="system-settings" border="0">
 
-### Step 4 – Deploy ✅
+**Print Marksheet**
+<div style="clear: both"> </div>
+<img src="https://i.ibb.co/5c1GHCj/capture-20210530-115521-crop.png" alt="print-marksheet">
 
-## 💻 Local Development
-```bash
-npm install
-# create .env.local with values from .env.example
-npm run dev
-```
+**Print Tabulation Sheet & Marksheet**
+<img src="https://i.ibb.co/QmscPfn/capture-20210530-115802.png" alt="tabulation-sheet" border="0">
 
-## Demo Accounts
-| Role | Email | Password |
-|------|-------|----------|
-| Super Admin | superadmin@royalacademy.com | Admin@2024! |
-| Branch Admin | admin@royalacademy.com | Admin@2024! |
-| Teacher | teacher@royalacademy.com | Teacher@2024! |
-| Student | student@royalacademy.com | Student@2024! |
+<hr />  
+
+There are 7 types of user accounts. They include:
+ 
+Administrators (Super Admin & Admin)
+- Librarian
+- Accountant
+- Teacher
+- Student
+- Parent
+
+**Requirements** 
+
+Check Laravel 8 Requirements https://laravel.com/docs/8.x
+
+**Installation**
+- Install dependencies (composer install)
+- Set Database Credentials & App Settings in dotenv file (.env)
+- Migrate Database (php artisan migrate)
+- Database seed (php artisan db:seed)
+
+**Login Credentials**
+After seeding. Login details as follows:
+
+| Account Type  | Username | Email | Password |
+| ------------- | -------- | ----- | -------- |
+| Super Admin | cj | cj@cj.com | cj |
+|  Admin | admin | admin@admin.com | cj |
+|  Teacher | teacher | teacher@teacher.com | cj |
+|  Parent | parent | parent@parent.com | cj |
+|  Accountant | accountant | accountant@accountant.com | cj |
+|  Student | student | student@student.com | cj |
+
+#### **FUNCTIONS OF ACCOUNTS** 
+
+**-- SUPER ADMIN**
+- Only Super Admin can delete any record
+- Create any user account
+ 
+**-- Administrators (Super Admin & Admin)**
+
+- Manage students class/sections
+- View marksheet of students
+- Create, Edit and manage all user accounts & profiles
+- Create, Edit and manage Exams & Grades
+- Create, Edit and manage Subjects
+- Manage noticeboard of school
+- Notices are visible in calendar in dashboard
+- Edit system settings
+- Manage Payments & fees
+
+**-- ACCOUNTANT**
+- Manage Payments & fees
+- Print Payment Receipts
+
+**-- LIBRARIAN**
+- Manage Books in the Library
+
+**-- TEACHER**
+- Manage Own Class/Section
+- Manage Exam Records for own Subjects
+- Manage Timetable if Assigned as Class Teacher
+- Manage own profile
+- Upload Study Materials
+
+**-- STUDENT**
+- View teacher profile
+- View own class subjects
+- View own marks and class timetable
+- View Payments
+- View library and book status
+- View noticeboard and school events in calendar
+- Manage own profile
+
+**-- PARENT**
+- View teacher profile
+- View own child's marksheet (Download/Print PDF)
+- View own child's Timetable
+- View own child's payments
+- View noticeboard and school events in calendar
+- Manage own profile
+
+### **Contributing**
+
+Your Contributions & suggestions are welcomed. Please use Pull Request
+
+### **Security Vulnerabilities**
+
+If you discover a security vulnerability within LAV_SMS, please send an e-mail to CJ Inspired via cjay.pub@gmail.com. All security vulnerabilities will be promptly addressed.
+
+***Please Note*** that some sections of this project are in the work-in-progress stage and would be updated soon. These include:
+
+- The Noticeboard/Calendar in the Dashboard Area
+- Librarian/Acountant user pages
+- Library Resources/Study Materials Upload for Students
+
+### **Contact [CJ INSPIRED]**
+- Phone : +2347068149559
