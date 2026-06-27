@@ -5,44 +5,26 @@ import { verifyAccessTokenWithReason } from '@/lib/jwt';
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    const header = request.headers.get('Authorization') || '';
+    if (!header.startsWith('Bearer ')) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ message: 'Missing authorization header' }, { status: 401 });
-    }
-
-    const token = authHeader.slice(7);
-    const { payload, isExpired } = verifyAccessTokenWithReason(token);
-
+    const { payload, isExpired } = verifyAccessTokenWithReason(header.slice(7));
     if (!payload) {
-      const code = isExpired ? 'TOKEN_EXPIRED' : undefined;
-      return NextResponse.json({ message: 'Invalid or expired token', ...(code && { code }) }, { status: 401 });
+      return NextResponse.json(
+        { message: isExpired ? 'Token expired' : 'Invalid token', code: isExpired ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN' },
+        { status: 401 }
+      );
     }
 
-    const user = await User.findById(payload._id)
-      .select('-password')
-      .populate('branch', 'name code city');
-
-    if (!user) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
-    }
+    await connectDB();
+    const user = await User.findById(payload._id).select('-password').populate('branch', 'name code city').lean() as any;
+    if (!user) return NextResponse.json({ message: 'User not found' }, { status: 404 });
 
     return NextResponse.json({
-      data: {
-        _id: user._id,
-        name: user.name,
-        firstName: (user as any).firstName,
-        lastName: (user as any).lastName,
-        email: user.email,
-        role: user.role,
-        branch: user.branch,
-        permissions: user.permissions || [],
-        isActive: user.isActive,
-      },
+      data: { _id: user._id, id: user._id, name: user.name, firstName: user.firstName, lastName: user.lastName,
+              email: user.email, role: user.role, branch: user.branch, permissions: user.permissions || [] },
     }, { status: 200 });
-  } catch (error) {
-    console.error('Me endpoint error:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json({ message: err.message }, { status: 500 });
   }
 }

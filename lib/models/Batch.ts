@@ -1,40 +1,22 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
-export interface IBatch extends Document {
-  name: string;
-  code: string;
-  course?: mongoose.Types.ObjectId;
-  class?: mongoose.Types.ObjectId;
-  startDate?: Date;
-  endDate?: Date;
-  schedule?: string; // e.g., "Mon-Wed-Fri 9AM-11AM"
-  maxStudents: number;
-  status: 'upcoming' | 'active' | 'completed' | 'cancelled';
-  notes?: string;
-  instructor?: mongoose.Types.ObjectId;
-  branch: mongoose.Types.ObjectId;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const BatchSchema = new Schema<IBatch>(
+const BatchSchema = new Schema(
   {
-    name: { type: String, required: true },
-    code: { type: String, required: true, unique: true, default: () => `BATCH-${Date.now()}-${Math.floor(100 + Math.random() * 900)}` },
-    course: { type: Schema.Types.ObjectId, ref: 'Course' },
-    class: { type: Schema.Types.ObjectId, ref: 'Class' },
-    startDate: { type: Date },
-    endDate: { type: Date },
-    schedule: { type: String },
-    maxStudents: { type: Number, default: 30 },
-    status: { type: String, enum: ['upcoming', 'active', 'completed', 'cancelled'], default: 'upcoming' },
-    notes: { type: String },
-    instructor: { type: Schema.Types.ObjectId, ref: 'User' },
-    branch: { type: Schema.Types.ObjectId, ref: 'Branch', required: true },
-    isActive: { type: Boolean, default: true },
+    name:        { type: String, required: true },
+    code:        { type: String, unique: true, default: () => `B-${Date.now()}-${Math.floor(100+Math.random()*900)}` },
+    class:       { type: Schema.Types.ObjectId, ref: 'Class' },
+    course:      { type: Schema.Types.ObjectId, ref: 'Course' },
+    instructor:  { type: Schema.Types.ObjectId, ref: 'User' },
+    branch:      { type: Schema.Types.ObjectId, ref: 'Branch' },
+    startDate:   { type: Date },
+    endDate:     { type: Date },
+    schedule:    { type: String },
+    maxStudents: { type: Number, default: 60 },
+    status:      { type: String, default: 'active' },
+    notes:       { type: String },
+    isActive:    { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true, strict: false }
 );
 
-export const Batch = mongoose.models.Batch || mongoose.model<IBatch>('Batch', BatchSchema);
+export const Batch = mongoose.models.Batch || mongoose.model('Batch', BatchSchema);

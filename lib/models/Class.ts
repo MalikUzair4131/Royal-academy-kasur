@@ -1,24 +1,14 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
-export interface IClass extends Document {
-  name: string;
-  code: string;
-  description?: string;
-  branch: mongoose.Types.ObjectId;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const ClassSchema = new Schema<IClass>(
+const ClassSchema = new Schema(
   {
-    name: { type: String, required: true },
-    code: { type: String, required: true, unique: true },
+    name:        { type: String, required: true },
+    code:        { type: String, unique: true, default: () => `CL-${Date.now()}-${Math.floor(100+Math.random()*900)}` },
     description: { type: String },
-    branch: { type: Schema.Types.ObjectId, ref: 'Branch', required: true },
-    isActive: { type: Boolean, default: true },
+    branch:      { type: Schema.Types.ObjectId, ref: 'Branch' },
+    isActive:    { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true, strict: false }
 );
 
-export const Class = mongoose.models.Class || mongoose.model<IClass>('Class', ClassSchema);
+export const Class = mongoose.models.Class || mongoose.model('Class', ClassSchema);

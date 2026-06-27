@@ -1,35 +1,17 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
-export interface ISalary extends Document {
-  employee: mongoose.Types.ObjectId;
-  month: Date;
-  baseSalary: number;
-  deductions: number;
-  bonuses: number;
-  totalSalary: number;
-  status: 'pending' | 'processed' | 'paid';
-  paidDate: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const SalarySchema = new Schema<ISalary>(
+const SalarySchema = new Schema(
   {
-    employee: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    month: { type: Date, required: true },
-    baseSalary: { type: Number, required: true },
-    deductions: { type: Number, default: 0 },
-    bonuses: { type: Number, default: 0 },
-    totalSalary: { type: Number },
-    status: { type: String, enum: ['pending', 'processed', 'paid'], default: 'pending' },
-    paidDate: { type: Date },
+    employee:     { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    month:        { type: Date },
+    baseSalary:   { type: Number, default: 0 },
+    deductions:   { type: Number, default: 0 },
+    bonuses:      { type: Number, default: 0 },
+    totalSalary:  { type: Number, default: 0 },
+    status:       { type: String, default: 'processed' },
+    paidDate:     { type: Date },
   },
-  { timestamps: true }
+  { timestamps: true, strict: false }
 );
 
-SalarySchema.pre('save', function (next) {
-  this.totalSalary = this.baseSalary + this.bonuses - this.deductions;
-  next();
-});
-
-export const Salary = mongoose.models.Salary || mongoose.model<ISalary>('Salary', SalarySchema);
+export const Salary = mongoose.models.Salary || mongoose.model('Salary', SalarySchema);

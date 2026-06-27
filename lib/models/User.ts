@@ -1,3 +1,7 @@
+/**
+ * User model — strict:false so any extra teacher/student fields are stored without errors.
+ * Only name + email + password + role required; email unique but duplicate handled gracefully.
+ */
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
@@ -7,11 +11,10 @@ export interface IUser extends Document {
   lastName?: string;
   email: string;
   password: string;
-  role: 'super_admin' | 'branch_admin' | 'teacher' | 'student' | 'parent';
+  role: string;
   branch?: mongoose.Types.ObjectId;
   isActive: boolean;
   teacherId?: string;
-  // Teacher-specific fields stored on User for simplicity
   phone?: string;
   qualification?: string;
   specialization?: string;
@@ -27,10 +30,7 @@ export interface IUser extends Document {
   bankAccount?: string;
   bankName?: string;
   notes?: string;
-  permissions: Array<{
-    module: string;
-    actions: ('view' | 'create' | 'edit' | 'delete' | 'manage')[];
-  }>;
+  permissions: Array<{ module: string; actions: string[] }>;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(password: string): Promise<boolean>;
@@ -38,71 +38,44 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
-    name: { type: String, required: true },
+    name:      { type: String, required: true },
     firstName: { type: String },
-    lastName: { type: String },
-    email: { type: String, required: true, unique: true, lowercase: true },
-    password: { type: String, required: true },
-    role: {
-      type: String,
-      enum: ['super_admin', 'branch_admin', 'teacher', 'student', 'parent'],
-      default: 'student',
-    },
-    branch: { type: Schema.Types.ObjectId, ref: 'Branch' },
-    isActive: { type: Boolean, default: true },
+    lastName:  { type: String },
+    email:     { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password:  { type: String, required: true },
+    role:      { type: String, default: 'student' },
+    branch:    { type: Schema.Types.ObjectId, ref: 'Branch' },
+    isActive:  { type: Boolean, default: true },
     teacherId: { type: String },
-    // Teacher profile fields
-    phone: { type: String },
-    qualification: { type: String },
-    specialization: { type: String },
-    experience: { type: Number },
-    gender: { type: String },
-    dateOfBirth: { type: Date },
-    cnic: { type: String },
-    address: { type: String },
-    joiningDate: { type: Date },
-    salaryType: { type: String, default: 'fixed' },
-    fixedSalary: { type: Number, default: 0 },
-    revenueSharePercentage: { type: Number, default: 0 },
-    bankAccount: { type: String },
-    bankName: { type: String },
-    notes: { type: String },
-    permissions: [
-      {
-        module: String,
-        actions: [String],
-      },
-    ],
+    phone:     { type: String },
+    qualification:         { type: String },
+    specialization:        { type: String },
+    experience:            { type: Number },
+    gender:                { type: String },
+    dateOfBirth:           { type: Date },
+    cnic:                  { type: String },
+    address:               { type: String },
+    joiningDate:           { type: Date },
+    salaryType:            { type: String, default: 'fixed' },
+    fixedSalary:           { type: Number, default: 0 },
+    revenueSharePercentage:{ type: Number, default: 0 },
+    bankAccount:           { type: String },
+    bankName:              { type: String },
+    notes:                 { type: String },
+    permissions: [{ module: String, actions: [String] }],
   },
-  { timestamps: true }
+  { timestamps: true, strict: false }
 );
 
-// Hash password before saving
+// Hash password
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-
   try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+    this.password = await bcrypt.hash(this.password, 10);
     next();
-  } catch (error) {
-    next(error as Error);
-  }
+  } catch (e) { next(e as Error); }
 });
 
-// Auto-generate teacherId for teacher users if missing
-UserSchema.pre('save', async function (next) {
-  try {
-    if (this.role === 'teacher' && !(this as any).teacherId) {
-      (this as any).teacherId = `TEA-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    }
-    next();
-  } catch (err) {
-    next(err as Error);
-  }
-});
-
-// Method to compare passwords
 UserSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
   return bcrypt.compare(password, this.password);
 };

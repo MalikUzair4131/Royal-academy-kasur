@@ -1,27 +1,16 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
-export interface IAttendance extends Document {
-  student: mongoose.Types.ObjectId;
-  batch?: mongoose.Types.ObjectId;
-  date: Date;
-  status: 'present' | 'absent' | 'leave' | 'late';
-  type?: 'student' | 'teacher';
-  remarks?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const AttendanceSchema = new Schema<IAttendance>(
+const AttendanceSchema = new Schema(
   {
     student: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
-    batch: { type: Schema.Types.ObjectId, ref: 'Batch' },
-    class: { type: Schema.Types.ObjectId, ref: 'Class' },
-    date: { type: Date, required: true, default: Date.now },
-    status: { type: String, enum: ['present', 'absent', 'leave', 'late'], default: 'absent' },
-    type: { type: String, enum: ['student', 'teacher'], default: 'student' },
+    batch:   { type: Schema.Types.ObjectId, ref: 'Batch' },
+    class:   { type: Schema.Types.ObjectId, ref: 'Class' },
+    date:    { type: Date, default: Date.now },
+    status:  { type: String, default: 'present' },
+    type:    { type: String, default: 'student' },
     remarks: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true, strict: false }
 );
 
-export const Attendance = mongoose.models.Attendance || mongoose.model<IAttendance>('Attendance', AttendanceSchema);
+export const Attendance = mongoose.models.Attendance || mongoose.model('Attendance', AttendanceSchema);

@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import dns from 'dns';
 import mongoose from 'mongoose';
 
 function loadLocalEnv() {
@@ -26,15 +25,6 @@ loadLocalEnv();
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Missing MONGODB_URI environment variable');
-}
-
-// Force a known working DNS resolver for SRV lookups if the default resolver fails.
-if (!process.env.NODE_DNS_SERVERS) {
-  try {
-    dns.setServers(['8.8.8.8', '1.1.1.1']);
-  } catch (error) {
-    // Ignore if DNS servers cannot be set in this environment.
-  }
 }
 
 const MONGODB_URI = process.env.MONGODB_URI;
